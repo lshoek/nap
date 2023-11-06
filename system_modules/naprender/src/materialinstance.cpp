@@ -408,7 +408,7 @@ namespace nap
 				mSamplerDescriptors.emplace_back();
 
 			VkDescriptorImageInfo& image_info = mSamplerDescriptors[sampler_descriptor_index];
-			image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			//image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			image_info.sampler = vk_sampler;
 
 			if (samplerInstance.get_type() == RTTI_OF(Sampler2DArrayInstance))
@@ -436,7 +436,7 @@ namespace nap
 		else
 		{
 			VkDescriptorImageInfo& image_info = mSamplerDescriptors[imageStartIndex];
-			image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			//image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			image_info.sampler = vk_sampler;
 
 			if (samplerInstance.get_type() == RTTI_OF(Sampler2DInstance))

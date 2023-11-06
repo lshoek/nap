@@ -18,6 +18,7 @@
 #include <vulkan/vulkan_core.h>
 #include <material.h>
 #include <renderglobals.h>
+#include <textureutils.h>
 
 #include <parametervec.h>
 #include <parameternumeric.h>
@@ -262,6 +263,18 @@ namespace nap
 					target->beginRendering();
 					mRenderService->renderObjects(*target, *shadow_camera, render_comps);
 					target->endRendering();
+
+					utility::transitionImageLayout(
+						mRenderService->getCurrentCommandBuffer(),
+						target->getDepthTexture().getHandle().getImage(),
+						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+						VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+						VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+						VK_ACCESS_SHADER_READ_BIT,
+						VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+						0, 1, VK_IMAGE_ASPECT_DEPTH_BIT
+					);
 					break;
 				}
 				case EShadowMapType::Cube:
@@ -509,8 +522,7 @@ namespace nap
                             break;
                         }
                         case EShadowMapType::Cube: {
-                            auto shadow_sampler_array = mesh_comp->getMaterialInstance().getOrCreateSamplerFromResource(
-                                    *mSamplerCubeResource, errorState);
+                            auto shadow_sampler_array = mesh_comp->getMaterialInstance().getOrCreateSamplerFromResource(*mSamplerCubeResource, errorState);
                             if (shadow_sampler_array != nullptr) {
                                 auto *instance = static_cast<SamplerCubeArrayInstance *>(shadow_sampler_array);
                                 assert(instance != nullptr);
