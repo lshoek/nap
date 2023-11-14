@@ -1,6 +1,7 @@
 #include "propertymapper.h"
 #include "naputils.h"
 #include "commands.h"
+#include "napkin-resources.h"
 
 #include <QStringList>
 #include <QMessageBox>
@@ -303,6 +304,15 @@ namespace napkin
 			return;
 		}
 
+		// Constants
+		if (!mNested && mPath.getName() == nap::material::constants)
+		{
+			const auto* dec = selectConstantDeclaration(parent);
+			if (dec != nullptr)
+				addConstantBinding(*dec, mPath);
+			return;
+		}
+
 		// Vertex binding
 		auto array_type = mPath.getArrayElementType();
 		if (!mNested && mPath.getName() == nap::material::vbindings)
@@ -371,6 +381,7 @@ namespace napkin
 			RTTI_OF(nap::Uniform),
 			RTTI_OF(nap::Sampler),
 			RTTI_OF(nap::BufferBinding),
+			RTTI_OF(nap::ShaderConstant),
 			RTTI_OF(nap::Material::VertexAttributeBinding)
 		};
 
@@ -497,17 +508,23 @@ namespace napkin
 		auto* doc = AppContext::get().getDocument();
 		assert(doc != nullptr);
 
-		// Only 2D samplers are supports
-		if (declaration.mType != nap::SamplerDeclaration::EType::Type_2D)
+		// Only 2D and Cube samplers are supported
+		if (declaration.mType == nap::SamplerDeclaration::EType::Type_2D)
 		{
-			nap::Logger::warn("Data type of shader variable %s is not supported", declaration.mName.c_str());
+			bool is_array = declaration.mNumElements > 1;
+			nap::rtti::TypeInfo sampler_type = is_array ? RTTI_OF(nap::Sampler2DArray) : RTTI_OF(nap::Sampler2D);
+			createBinding<nap::Sampler>(declaration.mName, sampler_type, propPath, *doc);
+			return;
+		}
+		else if (declaration.mType == nap::SamplerDeclaration::EType::Type_Cube)
+		{
+			bool is_array = declaration.mNumElements > 1;
+			nap::rtti::TypeInfo sampler_type = is_array ? RTTI_OF(nap::SamplerCubeArray) : RTTI_OF(nap::SamplerCube);
+			createBinding<nap::Sampler>(declaration.mName, sampler_type, propPath, *doc);
 			return;
 		}
 
-		// Create binding
-		bool is_array = declaration.mNumElements > 1;
-		nap::rtti::TypeInfo sampler_type = is_array ? RTTI_OF(nap::Sampler2DArray) : RTTI_OF(nap::Sampler2D);
-		createBinding<nap::Sampler>(declaration.mName, sampler_type, propPath, *doc);
+		nap::Logger::warn("Data type of shader variable %s is not supported", declaration.mName.c_str());
 	}
 
 	
@@ -595,9 +612,14 @@ namespace napkin
 			auto* array_uniform = createBinding<nap::UniformValueArray>(declaration.mName, found_it->second, path, *doc);
 
 			// Ask if entries should be created for the array
-			if (QMessageBox::question(nullptr, "Array",
-				QString("Create entries for array '%1'?").arg(declaration.mName.c_str()),
-				QMessageBox::Yes, QMessageBox::No) == QMessageBox::No)
+			QMessageBox msg(AppContext::get().getMainWindow());
+			msg.setWindowTitle("Array");
+			msg.setText(QString("Create entries for array '%1'?").arg(declaration.mName.c_str()));
+			msg.setIconPixmap(AppContext::get().getResourceFactory().getIcon(
+				QRC_ICONS_QUESTION).pixmap(32, 32));
+			msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg.setDefaultButton(QMessageBox::Yes);
+			if (msg.exec() == QMessageBox::No)
 				return;
 
 			// Get path to values property
@@ -634,7 +656,6 @@ namespace napkin
 			return;
 		}
 	}
-
 
 
 	const nap::BufferObjectDeclaration* MaterialPropertyMapper::selectBufferDeclaration(const nap::BufferObjectDeclarationList& list, QWidget* parent)
@@ -698,6 +719,36 @@ namespace napkin
 
 		nap::Logger::warn("Unable to create buffer binding");
 		nap::Logger::warn("Unsupported shader variable declaration '%s'", declaration.get_type().get_name().data());
+	}
+
+
+	const nap::ShaderConstantDeclaration* MaterialPropertyMapper::selectConstantDeclaration(QWidget* parent)
+	{
+		QStringList names;
+		const auto& shader_decs = mShader->getConstantDeclarations();
+		std::unordered_map<std::string, const nap::ShaderConstantDeclaration*> dec_map;
+		dec_map.reserve(shader_decs.size());
+		for (const auto& dec : shader_decs)
+		{
+			dec_map.emplace(dec.mName, &dec);
+			names << QString::fromStdString(dec.mName);
+		}
+		auto selection = nap::qt::FilterPopup::show(parent, names);
+		return selection.isEmpty() ? nullptr : dec_map[selection.toStdString()];
+	}
+
+
+	void MaterialPropertyMapper::addConstantBinding(const nap::ShaderConstantDeclaration& declaration, const PropertyPath& propPath)
+	{
+		// Get document
+		auto* doc = AppContext::get().getDocument();
+		assert(doc != nullptr);
+
+		// Create binding
+		auto* binding = createBinding<nap::ShaderConstant>(declaration.mName, RTTI_OF(nap::ShaderConstant), propPath, *doc);
+
+		// Set it to the default value specified in the shader
+		binding->mValue = declaration.mValue;
 	}
 
 
