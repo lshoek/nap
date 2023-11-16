@@ -69,8 +69,8 @@ namespace nap
 		if (mRenderPass != VK_NULL_HANDLE)
 			vkDestroyRenderPass(mRenderService->getDevice(), mRenderPass, nullptr);
 
-		destroyImageAndView(mDepthImage, mRenderService->getDevice(), mRenderService->getVulkanAllocator());
-		destroyImageAndView(mColorImage, mRenderService->getDevice(), mRenderService->getVulkanAllocator());
+		utility::destroyImageAndView(mDepthImage, mRenderService->getDevice(), mRenderService->getVulkanAllocator());
+		utility::destroyImageAndView(mColorImage, mRenderService->getDevice(), mRenderService->getVulkanAllocator());
 	}
 
 
@@ -217,9 +217,11 @@ namespace nap
 	}
 
 
-	DepthRenderTexture2D* RenderTarget::getDepthTexture()
+	DepthRenderTexture2D& RenderTarget::getDepthTexture()
 	{
-		return mDepthTexture.get();
+		assert(mHasDepthTexture);
+		assert(mDepthTexture != nullptr);
+		return *mDepthTexture;
 	}
 
 
