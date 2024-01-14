@@ -153,7 +153,7 @@ namespace nap
 		}
 
 		// Sampler2D
-		mSampler2DResource = std::make_unique<Sampler2DArray>(mMaxLightCount);
+		mSampler2DResource = std::make_unique<Sampler2DArray>(getMaximumLightCount());
 		mSampler2DResource->mID = utility::stringFormat("%s_Dummy_%s", RTTI_OF(Sampler2DArray).get_name().to_string().c_str(), math::generateUUID().c_str());
 		mSampler2DResource->mName = sampler::light::shadowMaps;
 
@@ -174,7 +174,7 @@ namespace nap
 		}
 
 		// SamplerCube
-		mSamplerCubeResource = std::make_unique<SamplerCubeArray>(mMaxLightCount);
+		mSamplerCubeResource = std::make_unique<SamplerCubeArray>(getMaximumLightCount());
 		mSamplerCubeResource->mID = utility::stringFormat("%s_Dummy_%s", RTTI_OF(SamplerCubeArray).get_name().to_string().c_str(), math::generateUUID().c_str());
 		mSamplerCubeResource->mName = sampler::light::cubeShadowMaps;
 
@@ -315,7 +315,7 @@ namespace nap
 	}
 
 
-	bool RenderAdvancedService::pushLights(const std::vector<RenderableComponentInstance*>& renderComps, bool disableLighting, utility::ErrorState& errorState)
+	bool RenderAdvancedService::pushLightsInternal(const std::vector<RenderableComponentInstance*>& renderComps, bool disableLighting, utility::ErrorState& errorState)
 	{
 		// TODO: Cache light uniforms
 
@@ -327,7 +327,7 @@ namespace nap
 		std::vector<RenderableMeshComponentInstance*> filtered_mesh_comps;
 		for (auto& comp : renderComps)
 		{
-			// Ensure the component is visible and had a material instance
+			// Ensure the component is visible and has a material instance
 			if (comp->isVisible() && comp->get_type().is_derived_from(RTTI_OF(RenderableMeshComponentInstance)))
 			{
 				// Ensure the shader interface supports lights
@@ -357,12 +357,13 @@ namespace nap
 			uint light_index = 0;
 			for (const auto& light : mLightComponents)
 			{
-				if (light_index >= mMaxLightCount)
+				if (light_index >= getMaximumLightCount())
 					break;
 
 				// Fetch flags
 				auto it_flags = mLightFlagsMap.find(light);
 				assert(it_flags != mLightFlagsMap.end());
+                updateLightFlags(*light, it_flags->second);
 
 				// Set light uniform defaults
 				auto& light_element = light_array->getElement(light_index);
@@ -480,7 +481,7 @@ namespace nap
             uint light_index = 0;
             for (const auto& light : mLightComponents)
             {
-                if (light_index >= mMaxLightCount)
+                if (light_index >= getMaximumLightCount())
                     break;
 
                 if (light->isShadowEnabled())
@@ -497,7 +498,6 @@ namespace nap
                     // Fetch flags
                     auto it_flags = mLightFlagsMap.find(light);
                     assert(it_flags != mLightFlagsMap.end());
-					updateLightFlags(*light, it_flags->second);
 
                     switch (light->getShadowMapType())
                     {
@@ -552,7 +552,7 @@ namespace nap
 
 	bool RenderAdvancedService::pushLights(const std::vector<RenderableComponentInstance*>& renderComps, utility::ErrorState& errorState)
 	{
-		return pushLights(renderComps, false, errorState);
+		return pushLightsInternal(renderComps, false, errorState);
 	}
 
 
@@ -571,7 +571,7 @@ namespace nap
 				rt->mID = utility::stringFormat("%s_%s", RTTI_OF(CubeRenderTarget).get_name().to_string().c_str(), math::generateUUID().c_str());
 				rt->mClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 				rt->mSampleShading = cm->mSampleShading;
-				rt->mUpdateLODs = true;
+				rt->mUpdateLODs = cm->mGenerateLODs;
 				rt->mCubeTexture = cm;
 
 				if (!rt->init(errorState))
@@ -594,11 +594,8 @@ namespace nap
 		uint count = 0U;
 		for (auto& cube_map : cube_maps)
 		{
-			auto projection_matrix = glm::perspective(90.0f, 1.0f, 0.01f, 1000.0f);
-			auto origin = glm::vec3(0.0f, 0.0f, 0.0f);
-
 			auto& rt = mCubeMapFromFileTargets[count];
-			rt->render(origin, projection_matrix, [rs = &renderService, cm = cube_map.get(), mesh = mNoMesh.get(), mtl = mCubeMaterialInstance.get()]
+			rt->render([rs = &renderService, cm = cube_map.get(), mesh = mNoMesh.get(), mtl = mCubeMaterialInstance.get()]
 				(CubeRenderTarget& target, const glm::mat4& projection, const glm::mat4& view)
 			{
 				auto* ubo = mtl->getOrCreateUniform(uniform::cubemap::uboStruct);
@@ -610,7 +607,7 @@ namespace nap
 				// Set equirectangular texture to convert
 				auto* sampler = mtl->getOrCreateSampler<Sampler2DInstance>(uniform::cubemap::sampler::equiTexture);
 				if (sampler != nullptr)
-					sampler->setTexture(*cm->mSourceTexture);
+					sampler->setTexture(cm->getSourceTexture());
 
 				// Get valid descriptor set
 				const DescriptorSet& descriptor_set = mtl->update();
@@ -807,8 +804,8 @@ namespace nap
 		mLightComponents.emplace_back(&light);
 
         // Warn when a light component is ignored
-        if (mLightComponents.size() > mMaxLightCount)
-            nap::Logger::warn("'%s' exceeds the maximum of %d nap::LightComponent(s)", light.mID.c_str(), mMaxLightCount);
+        if (mLightComponents.size() > getMaximumLightCount())
+            nap::Logger::warn("'%s' exceeds the maximum of %d nap::LightComponent(s)", light.mID.c_str(), getMaximumLightCount());
 	}
 
 	 

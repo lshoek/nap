@@ -30,21 +30,20 @@ namespace nap
 	}
 
 	/**
-	 * Texture shader. Renders an object using a texture. Set color and alpha to 1.0 to render the texture in its original color.
+	 * Renders cube texture faces from an equirectangular texture. Used by `nap::RenderAdvancedService` to render
+	 * `nap::CubeMapFromFile` on initialization.
+	 * 
+	 * The cube map shader exposes the following shader variables:
 	 *
-	 * The texture shader exposes the following shader variables:
+	 * ~~~~~{.frag}
+	 * uniform UBO
+	 * {
+	 *		uint face;
+	 * } ubo;
+	 * 
+	 * uniform sampler2D equiTexture;
+	 * ~~~~~
 	 *
-	 * ~~~~~{.vert}
-	 *		uniform UBO
-	 *		{
-	 *			uniform vec3 color;
-	 *			uniform float alpha;
-	 *		} ubo;
-	 * ~~~~
-	 *
-	 * ~~~~{.frag}
-	 *		uniform sampler2D colorTexture;
-	 * ~~~~
 	 */
 	class NAPAPI CubeMapShader : public Shader
 	{

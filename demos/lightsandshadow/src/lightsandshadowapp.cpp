@@ -47,7 +47,11 @@ namespace nap
 
 		mCameraEntity = scene->findEntity("CameraEntity");
 		if (!errorState.check(mCameraEntity != nullptr, "Missing CameraEntity"))
-			return false;	
+			return false;
+
+		mShadowMask = mRenderService->findRenderMask("Shadow");
+		if (!errorState.check(mShadowMask != 0, "Missing render tag with name `Shadow`"))
+			return false;
 
 		return true;
 	}
@@ -131,8 +135,7 @@ namespace nap
 
 
 	/**
-	 * Render all objects to screen at once
-	 * In this case that's only the particle mesh
+	 * Render all objects to screen
 	 */
 	void LightsAndShadowApp::render()
 	{
@@ -144,10 +147,11 @@ namespace nap
 		std::vector<RenderableComponentInstance*> render_comps;
 		mWorldEntity->getComponentsOfTypeRecursive<RenderableComponentInstance>(render_comps);
 
-		// Shadow pass
+		// Record shadow map rendering operations to the headless command buffer. The `renderShadows` call in the RenderAdvanced service does this for all
+		// lights that have shadows enabled. When the `updateMaterials` argument is set to true, light uniform and sampler data is also updated.
 		if (mRenderService->beginHeadlessRecording())
 		{
-			mRenderAdvancedService->renderShadows(render_comps, true, mRenderService->findRenderMask("Shadow"));
+			mRenderAdvancedService->renderShadows(render_comps, true, mShadowMask);
 			mRenderService->endHeadlessRecording();
 		}
 

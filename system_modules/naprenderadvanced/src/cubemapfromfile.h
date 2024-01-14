@@ -4,6 +4,7 @@
 #include <nap/resource.h>
 #include <nap/resourceptr.h>
 #include <rendertexturecube.h>
+#include <image.h>
 
 // Local includes
 #include "cuberendertarget.h"
@@ -14,7 +15,23 @@ namespace nap
 	class Core;
 
 	/**
-	 * CubeMapFromFile
+	 * Loads equirectangular image from disk, uploads it to the GPU, and schedules a rendering operation to generate a cube
+	 * map from it in the `nap::RenderAdvancedService`. If `GenerateLODs` is enabled, GPU memory for mip-maps (LODs) are
+	 * allocated and will be updated using blit operations after the cube face render passes.
+	 *
+	 * This object must be pre-rendered at least once in a headless render pass in the first frame. The RenderAdvanced service
+	 * queues a `HeadlessRenderCommand` for each `nap::CubeMapFromFile` in the scene after resource initialization, and will
+	 * be handled when headless render commands are recorded. The code below only begins a headless recording operation only
+	 * when headless commands are queued in the render service.
+	 *
+	 * ~~~~~{.cpp}
+	 *	if (mRenderService->isHeadlessCommandQueued())
+	 *	{
+	 *		// Handles `nap::CubeMapFromFile` pre-render operations in the first frame
+	 *		if (mRenderService->beginHeadlessRecording())
+	 *			mRenderService->endHeadlessRecording();
+	 *	}
+	 * ~~~~~
 	 */
 	class NAPAPI CubeMapFromFile : public RenderTextureCube
 	{
@@ -29,16 +46,24 @@ namespace nap
 		CubeMapFromFile(Core& core);
 
 		/**
-		* Initialize this object after de-serialization
-		* @param errorState contains the error message when initialization fails
-		*/
+		 * Loads the image from disk and schedules the upload to the GPU on success.
+		 * @param errorState contains the error when initialization fails
+		 * @return true when successful, otherwise false.
+		 */
 		virtual bool init(utility::ErrorState& errorState) override;
 
-	public:
-		ResourcePtr<Texture2D>		mSourceTexture;							///< Property: 'SourceTexture' Texture to convert to cube map
-		bool						mSampleShading = false;					///< Property: 'SampleShading' Reduces texture aliasing when enabled, at higher computational cost
+		/**
+		 * @return the source texture
+		 */
+		Texture2D& getSourceTexture() { return *mSourceImage; }
 
 	public:
-		using RenderTextureCube::mGenerateLODs;
+		std::string					mImagePath;								///< Property: 'ImagePath' Path to the image on disk to load
+		bool						mSampleShading = false;					///< Property: 'SampleShading' Reduces texture aliasing when enabled, at higher computational cost
+
+		using RenderTextureCube::mGenerateLODs;								///< Property: 'GenerateLODs' whether to use and update mip-maps each time the cube texture is updated
+
+	private:
+		std::unique_ptr<Image> mSourceImage;
 	};
 }

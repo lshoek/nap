@@ -1,42 +1,6 @@
 {
     "Objects": [
         {
-            "Type": "nap::BoxFrameMesh",
-            "mID": "BoxFrame",
-            "PolygonMode": "Line",
-            "Usage": "Static"
-        },
-        {
-            "Type": "nap::BoxMesh",
-            "mID": "SkyBoxMesh",
-            "Usage": "Static",
-            "CullMode": "Front",
-            "PolygonMode": "Fill",
-            "Size": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-            },
-            "Position": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-            },
-            "Color": {
-                "Values": [
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "FlipNormals": false
-        },
-        {
-            "Type": "nap::ConstantShader",
-            "mID": "ConstantShader"
-        },
-        {
             "Type": "nap::Entity",
             "mID": "CameraEntity",
             "Components": [
@@ -141,12 +105,10 @@
                     "Type": "nap::RenderSkyBoxComponent",
                     "mID": "RenderSkyBox",
                     "Visible": true,
-                    "Tags": [
-                        "RenderTag_Default"
-                    ],
+                    "Tags": [],
                     "LayerRegistry": "RenderLayerRegistry",
                     "Layer": "RenderLayer_SkyBox",
-                    "Mesh": "SkyBoxMesh",
+                    "Mesh": "",
                     "MaterialInstance": {
                         "Uniforms": [],
                         "Samplers": [
@@ -187,7 +149,18 @@
                         }
                     },
                     "CubeTexture": "UffiziCubeMap",
-                    "Color": ""
+                    "Color": {
+                        "Type": "nap::ParameterEntryRGBColorFloat",
+                        "mID": "ParameterEntryRGBColorFloat_655ecd86",
+                        "Parameter": "SkyBoxColor",
+                        "Default": {
+                            "Values": [
+                                0.0,
+                                0.0,
+                                0.0
+                            ]
+                        }
+                    }
                 }
             ],
             "Children": []
@@ -296,6 +269,12 @@
                         "Offset": 0.0
                     },
                     "Enabled": true
+                },
+                {
+                    "Type": "nap::UpdateMaterialComponent",
+                    "mID": "UpdateTorusMaterial",
+                    "Color": "TorusColor",
+                    "Fresnel": "TorusFresnel"
                 }
             ],
             "Children": []
@@ -348,42 +327,6 @@
         },
         {
             "Type": "nap::Material",
-            "mID": "ConstantMaterial",
-            "Uniforms": [
-                {
-                    "Type": "nap::UniformStruct",
-                    "mID": "UniformStruct_5898b0a4",
-                    "Name": "UBO",
-                    "Uniforms": [
-                        {
-                            "Type": "nap::UniformVec3",
-                            "mID": "UniformVec3_57df2031",
-                            "Name": "color",
-                            "Value": {
-                                "x": 1.0,
-                                "y": 1.0,
-                                "z": 1.0
-                            }
-                        },
-                        {
-                            "Type": "nap::UniformFloat",
-                            "mID": "UniformFloat_b8d0a938",
-                            "Name": "alpha",
-                            "Value": 1.0
-                        }
-                    ]
-                }
-            ],
-            "Samplers": [],
-            "Buffers": [],
-            "Constants": [],
-            "Shader": "ConstantShader",
-            "VertexAttributeBindings": [],
-            "BlendMode": "Opaque",
-            "DepthMode": "InheritFromBlendMode"
-        },
-        {
-            "Type": "nap::Material",
             "mID": "EnvironmentMaterial",
             "Uniforms": [
                 {
@@ -398,6 +341,16 @@
                             "Value": {
                                 "x": 0.5,
                                 "y": 4.0
+                            }
+                        },
+                        {
+                            "Type": "nap::UniformVec3",
+                            "mID": "color_22fd2aa3",
+                            "Name": "color",
+                            "Value": {
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 0.0
                             }
                         }
                     ]
@@ -424,13 +377,19 @@
             "DepthMode": "InheritFromBlendMode"
         },
         {
+            "Type": "nap::ParameterGUI",
+            "mID": "ParameterGUI",
+            "Serializable": true,
+            "Group": "Parameters"
+        },
+        {
             "Type": "nap::ParameterGroup",
-            "mID": "LightParameters",
+            "mID": "Parameters",
             "Parameters": [
                 {
                     "Type": "nap::ParameterRGBColorFloat",
-                    "mID": "LightColorParam",
-                    "Name": "LightColor",
+                    "mID": "SkyBoxColor",
+                    "Name": "SkyBoxColor",
                     "Value": {
                         "Values": [
                             1.0,
@@ -440,64 +399,31 @@
                     }
                 },
                 {
-                    "Type": "nap::ParameterFloat",
-                    "mID": "LightIntensityParam",
-                    "Name": "LightIntensity",
-                    "Value": 1.0,
-                    "Minimum": 0.0,
-                    "Maximum": 1.0
+                    "Type": "nap::ParameterRGBColorFloat",
+                    "mID": "TorusColor",
+                    "Name": "TorusColor",
+                    "Value": {
+                        "Values": [
+                            0.16078431904315949,
+                            0.3450980484485626,
+                            1.0
+                        ]
+                    }
                 },
                 {
-                    "Type": "nap::ParameterFloat",
-                    "mID": "LightAttenuationParam",
-                    "Name": "LightAttenuation",
-                    "Value": 0.0,
-                    "Minimum": 0.0,
-                    "Maximum": 1.0
-                },
-                {
-                    "Type": "nap::ParameterFloat",
-                    "mID": "LightAngleParam",
-                    "Name": "LightAngle",
-                    "Value": 90.0,
-                    "Minimum": 0.0,
-                    "Maximum": 360.0
-                },
-                {
-                    "Type": "nap::ParameterFloat",
-                    "mID": "LightFalloffParam",
-                    "Name": "LightFalloff",
-                    "Value": 1.0,
-                    "Minimum": 0.0,
-                    "Maximum": 1.0
+                    "Type": "nap::ParameterVec2",
+                    "mID": "TorusFresnel",
+                    "Name": "TorusFresnel",
+                    "Value": {
+                        "x": 0.75,
+                        "y": 4.0
+                    },
+                    "Clamp": true,
+                    "Minimum": 0.009999999776482582,
+                    "Maximum": 8.0
                 }
             ],
             "Groups": []
-        },
-        {
-            "Type": "nap::PlaneMesh",
-            "mID": "PlaneMesh",
-            "Usage": "Static",
-            "CullMode": "Back",
-            "PolygonMode": "Fill",
-            "Size": {
-                "x": 1.0,
-                "y": 1.0
-            },
-            "Position": {
-                "x": 0.0,
-                "y": 0.0
-            },
-            "Color": {
-                "Values": [
-                    1.0,
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Rows": 1,
-            "Columns": 1
         },
         {
             "Type": "nap::RenderLayerRegistry",
@@ -514,28 +440,6 @@
                     "Name": "SkyBox"
                 }
             ]
-        },
-        {
-            "Type": "nap::RenderTagGroup",
-            "mID": "RenderTags",
-            "Members": [
-                {
-                    "Type": "nap::RenderTag",
-                    "mID": "RenderTag_Default",
-                    "Name": "Default"
-                },
-                {
-                    "Type": "nap::RenderTag",
-                    "mID": "RenderTag_Gizmo",
-                    "Name": "Gizmo"
-                },
-                {
-                    "Type": "nap::RenderTag",
-                    "mID": "RenderTag_Shadow",
-                    "Name": "Shadow"
-                }
-            ],
-            "Children": []
         },
         {
             "Type": "nap::RenderWindow",
@@ -563,27 +467,6 @@
         },
         {
             "Type": "nap::ResourceGroup",
-            "mID": "CubeImages",
-            "Members": [
-                {
-                    "Type": "nap::ImageFromFile",
-                    "mID": "EquirectangularTexture",
-                    "Usage": "Static",
-                    "ImagePath": "equi_uffizi.png",
-                    "GenerateLods": false
-                },
-                {
-                    "Type": "nap::ImageFromFile",
-                    "mID": "EquirectangularTestTexture",
-                    "Usage": "Static",
-                    "ImagePath": "equi_test.jpg",
-                    "GenerateLods": false
-                }
-            ],
-            "Children": []
-        },
-        {
-            "Type": "nap::ResourceGroup",
             "mID": "CubeMaps",
             "Members": [
                 {
@@ -601,7 +484,7 @@
                             0.0
                         ]
                     },
-                    "SourceTexture": "EquirectangularTexture",
+                    "ImagePath": "equi_uffizi.png",
                     "SampleShading": false,
                     "GenerateLODs": true
                 },
@@ -620,7 +503,7 @@
                             0.0
                         ]
                     },
-                    "SourceTexture": "EquirectangularTestTexture",
+                    "ImagePath": "equi_test.jpg",
                     "SampleShading": false,
                     "GenerateLODs": true
                 }

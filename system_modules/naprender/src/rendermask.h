@@ -25,7 +25,20 @@ namespace nap
 	using RenderMask = uint64;
 
 	/**
-	 * Render tag.
+	 * Render tags can be used to categorize render components. Unlike render layers, tags are unordered and multiple
+	 * of them can be assigned to a single render component. Each tag resource registers itself in the render service
+	 * and is assigned a unique tag index on app initialization. This ensures tags can be composited into render masks,
+	 * which are bit flags that are fast to compare.
+	 *
+	 * One useful example would be to categorize specific components as "Debug", distinguishing objects used as visual
+	 * aid for debugging purposes from standard objects (tag "Default"). They may be excluded from rendering based on
+	 * settings or a window setup for instance. You could do the following:
+	 * 
+	 * `````{.cpp}
+	 * // Consider caching the render mask
+	 * RenderMask mask = mRenderService->findRenderMask("Default") | mRenderService->findRenderMask("Debug");
+	 * mRenderService->renderObjects(renderTarget, camera, render_comps, mask);
+	 * `````
 	 */
 	class NAPAPI RenderTag : public Device
 	{
@@ -61,7 +74,7 @@ namespace nap
 
 	/**
 	 * Creates a render mask from a list of tags
-	 * @param tags
+	 * @param tags a list of tags to create a mask from
 	 * @return the render mask
 	 */
 	static RenderMask createRenderMask(const RenderTagList& tags)
@@ -72,11 +85,10 @@ namespace nap
 		return mask;
 	}
 
-
 	/**
-	 * Compares component and inclusion masks
-	 * @param componentMask
-	 * @param inclusionMask
+	 * Compares component and inclusion masks, returns true if any of the tags overlap using bitwise AND
+	 * @param componentMask the render mask of a component
+	 * @param inclusionMask the render mask to compare with
 	 * @return true if the componentMask is included in the inclusionMask
 	 */
 	static bool compareRenderMask(RenderMask componentMask, RenderMask inclusionMask)

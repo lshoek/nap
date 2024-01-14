@@ -16,7 +16,6 @@
 #include <renderglobals.h>
 #include <nap/logger.h>
 #include <descriptorsetcache.h>
-#include <uniformupdate.h>
 
 RTTI_BEGIN_CLASS(nap::RenderSkyBoxComponent)
 	RTTI_PROPERTY("CubeTexture", &nap::RenderSkyBoxComponent::mCubeTexture, nap::rtti::EPropertyMetaData::Required)
@@ -30,33 +29,40 @@ RTTI_END_CLASS
 namespace nap
 {
 	//////////////////////////////////////////////////////////////////////////
-	// RenderSkyBoxComponent
-	//////////////////////////////////////////////////////////////////////////
-
-	void RenderSkyBoxComponent::getDependentComponents(std::vector<rtti::TypeInfo>& components) const
-	{
-		components.push_back(RTTI_OF(CameraComponent));
-	}
-
-
-	//////////////////////////////////////////////////////////////////////////
 	// RenderSkyBoxComponentInstance
 	//////////////////////////////////////////////////////////////////////////
 
 	RenderSkyBoxComponentInstance::RenderSkyBoxComponentInstance(EntityInstance& entity, Component& resource) :
 		RenderableMeshComponentInstance(entity, resource),
-		mRenderService(*entity.getCore()->getService<RenderService>())
+		mRenderService(*entity.getCore()->getService<RenderService>()),
+		mSkyBoxMesh(std::make_unique<BoxMesh>(*entity.getCore()))
 	{ }
 
 
 	bool RenderSkyBoxComponentInstance::init(utility::ErrorState& errorState)
 	{
+		// Fetch resource
 		mResource = getComponent<RenderSkyBoxComponent>();
-		if (!errorState.check(mResource->mMesh != nullptr, utility::stringFormat("%s: Property 'Mesh' cannot be NULL", mID.c_str()).c_str()))
-			return false;
 
+		// Initialize base renderable mesh component instance
 		if (!RenderableMeshComponentInstance::init(errorState))
 			return false;
+
+		// Initialize skybox mesh
+		mSkyBoxMesh->mPolygonMode = EPolygonMode::Fill;
+		mSkyBoxMesh->mUsage = EMemoryUsage::Static;
+		mSkyBoxMesh->mCullMode = ECullMode::Front;
+		mSkyBoxMesh->mFlipNormals = false;
+		if (!mSkyBoxMesh->init(errorState))
+			return false;
+
+		// Create renderable mesh
+		RenderableMesh renderable_mesh = createRenderableMesh(*mSkyBoxMesh, errorState);
+		if (!renderable_mesh.isValid())
+			return false;
+
+		// Set the skybox mesh to be used when drawing
+		setMesh(renderable_mesh);
 
 		// Set equirectangular texture to convert
 		auto* sampler = mMaterialInstance.getOrCreateSampler<SamplerCubeInstance>("cubeTexture");
@@ -77,7 +83,12 @@ namespace nap
 		if (mResource->mColor != nullptr)
 		{
 			if (mResource->mColor->hasParameter())
-				registerUniformUpdate(*color, *mResource->mColor->mParameter);
+			{
+				auto param = mResource->mColor->mParameter;
+				color->setValue(param->mValue.toVec3());
+				mColorChangedSlot.setFunction(std::bind(&RenderSkyBoxComponentInstance::onUniformRGBColorUpdate, this, std::placeholders::_1, color));
+				param->valueChanged.connect(mColorChangedSlot);
+			}
 			else
 				color->setValue(mResource->mColor->getValue().toVec3());
 		}

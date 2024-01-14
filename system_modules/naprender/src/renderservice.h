@@ -575,17 +575,20 @@ namespace nap
 		const DisplayList& getDisplays() const;
 
 		/**
-		 *
+		 * Registers a new render tag to the render service. Called by RenderTag::start.
+		 * @param the render tag to register. Asserts if already registered.
 		 */
 		void addTag(const RenderTag& renderTag);
 
 		/**
-		 *
+		 * Removes a render tag from the render service. Called by RenderTag::stop.
+		 * @param the render tag to remove. Asserts if not found.
 		 */
 		void removeTag(const RenderTag& renderTag);
 
 		/**
-		 * Asserts if unavailable
+		 * Returns the render tag index in the render tag registry. Asserts if unavailable.
+		 * @return the render tag index in the render tag registry.
 		 */
 		uint getTagIndex(const RenderTag& renderTag) const;
 
@@ -780,6 +783,12 @@ namespace nap
 		VkSampleCountFlagBits getMaxRasterizationSamples() const;
 
 		/**
+		 * Returns the max compute shader workgroup size.
+		 * @return the max compute shader workgroup size.
+		 */
+		glm::uvec3 getMaxComputeWorkGroupSize() const;
+
+		/**
 		 * Returns max supported rasterization samples based on the requested number of samples.
 		 * The output is automatically clamped if the requested number of samples exceeds the hardware limit.
 		 * @return if requested number of samples is supported by hardware.
@@ -901,12 +910,16 @@ namespace nap
 		TextureCube& getErrorTextureCube() const									{ return *mErrorTextureCube; }
 
 		/**
-		 * 
+		 * Returns the render mask denoting the render tag with the name of the tagName argument or 0 if no match is found.
+		 * @return a render mask of the tag to be found or 0 if there is no match.
 		 */
 		RenderMask findRenderMask(const std::string& tagName);
 
 		/**
-		 *
+		 * Returns the layer index of the layer with the name of the layerName argument or 0 if no match or registry is found.
+		 * Queries the resource manager for `nap::RenderLayerRegistry` objects and selects the first occurrence.
+		 * Logs a warning when more than one layer registry is found.
+		 * @return the layer index of the layer to be found or 0 if no match or registry is found.
 		 */
 		LayerIndex findLayerIndex(const std::string& layerName);
 
@@ -1035,11 +1048,6 @@ namespace nap
 		 * @param frameIndex The index of the frame to wait for
 		 */
 		void waitForFence(int frameIndex);
-
-		/**
-		 * @return shader search paths present in module data folders
-		 */
-		const std::vector<std::string>& getShaderSearchPaths() const				{ return mShaderSearchPaths; }
 
 	protected:
 		/**
@@ -1325,8 +1333,5 @@ namespace nap
 
 		// Cache read from ini file, contains saved settings
 		std::vector<std::unique_ptr<rtti::Object>> mCache;
-
-		// Shader search paths
-		std::vector<std::string>				mShaderSearchPaths;
 	};
 } // nap

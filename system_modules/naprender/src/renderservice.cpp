@@ -14,7 +14,7 @@
 #include "mesh.h"
 #include "depthsorter.h"
 #include "gpubuffer.h"
-#include "texture2d.h"
+#include "texture.h"
 #include "descriptorsetcache.h"
 #include "descriptorsetallocator.h"
 #include "sdlhelpers.h"
@@ -36,6 +36,7 @@
 #include <rtti/jsonwriter.h>
 #include <rtti/jsonreader.h>
 #include <rtti/defaultlinkresolver.h>
+#include <glm/gtc/type_ptr.hpp>
 
 // Required to enbale high dpi rendering on windows
 #ifdef _WIN32
@@ -227,7 +228,9 @@ namespace nap
 
 
 	/**
-	 * @return Vulkan topology mode based on given NAP draw mode
+	 * Returns whether the specified NAP draw mode is a Vulkan list topology. This is used to determine whether to enable a
+	 * primitive restart index when creating a pipeline input assembly state.
+	 * @return whether the specified NAP draw mode is a Vulkan list topology.
 	 */
 	static bool isListTopology(EDrawMode drawMode)
 	{
@@ -1062,7 +1065,7 @@ namespace nap
 		{
 			const VertexAttributeDeclaration* shader_vertex_attribute = kvp.second.get();
 			bindingDescriptions.push_back({ shader_attribute_binding, static_cast<uint>(shader_vertex_attribute->mElementSize), VK_VERTEX_INPUT_RATE_VERTEX });
-			attributeDescriptions.push_back({ static_cast<uint>(shader_vertex_attribute->mLocation), shader_attribute_binding, shader_vertex_attribute->mFormat, 0U });
+			attributeDescriptions.push_back({ static_cast<uint>(shader_vertex_attribute->mLocation), shader_attribute_binding, shader_vertex_attribute->mFormat, 0 });
 
 			shader_attribute_binding++;
 		}
@@ -1821,7 +1824,7 @@ namespace nap
 				return false;
 
 			// Clear the queue submit operation flags
-			frame.mQueueSubmitOps = 0U;
+			frame.mQueueSubmitOps = 0;
 		}
 
 		// Try to load .ini file and extract saved settings, allowed to fail
@@ -1830,17 +1833,6 @@ namespace nap
 		{
 			ini_error.fail("Unable to load: %s", getIniFilePath().c_str());
 			nap::Logger::warn(errorState.toString());
-		}
-
-		// Gather shader search paths
-		for (auto* mod : getCore().getModuleManager().getModules())
-		{
-			for (const auto& path : mod->getInformation().mDataSearchPaths)
-			{
-				auto shader_path = utility::joinPath({ path, "shaders" });
-				if (utility::dirExists(shader_path))
-					mShaderSearchPaths.emplace_back(shader_path);
-			}
 		}
 
 		mInitialized = true;
@@ -2056,16 +2048,16 @@ namespace nap
 	RenderMask RenderService::findRenderMask(const std::string& tagName)
 	{
 		if (mRenderTagRegistry.empty())
-			return 0U;
+			return 0;
 
-		uint count = 0U;
+		uint count = 0;
 		for (auto& tag : mRenderTagRegistry)
 		{
 			if (tag->mName == tagName)
-				return 1U << count;
+				return 1 << count;
 			++count;
 		}
-		return 0U;
+		return 0;
 	}
 
 
@@ -2084,16 +2076,16 @@ namespace nap
 		}
 
 		if (mRenderLayerRegistry == nullptr)
-			return 0U;
+			return 0;
 
-		uint count = 0U;
+		uint count = 0;
 		for (auto& tag : mRenderLayerRegistry->mLayers)
 		{
 			if (tag->mName == layerName)
 				return count;
 			++count;
 		}
-		return 0U;
+		return 0;
 	}
 
 
@@ -2160,6 +2152,12 @@ namespace nap
 		// Initialization succeeded, valid entry
 		auto inserted = mMaterials.emplace(shaderType, std::make_unique<UniqueMaterial>(std::move(shader), std::move(material)));
 		return inserted.first->second->mMaterial.get();
+	}
+
+
+	glm::uvec3 RenderService::getMaxComputeWorkGroupSize() const
+	{
+		return glm::make_vec3<uint>(&getPhysicalDeviceProperties().limits.maxComputeWorkGroupSize[0]);
 	}
 
 
@@ -2431,7 +2429,7 @@ namespace nap
 		mIsRenderingFrame = true;
 
 		// Clear the queue submit operation flags for the current frame
-		mFramesInFlight[mCurrentFrameIndex].mQueueSubmitOps = 0U;
+		mFramesInFlight[mCurrentFrameIndex].mQueueSubmitOps = 0;
 
 		// We wait for the fence for the current frame. This ensures that, when the wait completes, the command buffer
 		// that the fence belongs to, and all resources referenced from it, are available for (re)use.
@@ -2577,8 +2575,8 @@ namespace nap
 		// on any of the command buffers (rendering, headless rendering, compute), the corresponding EQueueSubmitOp bit is
 		// set in mQueueSubmitOps of the current frame. This way, we keep track of what queue submissions have occurred.
 		const Frame& frame = mFramesInFlight[mCurrentFrameIndex];
-		NAP_ASSERT_MSG((frame.mQueueSubmitOps & EQueueSubmitOp::Rendering) == 0U, "Recording compute commands after rendering within a single frame is not allowed");
-		NAP_ASSERT_MSG((frame.mQueueSubmitOps & EQueueSubmitOp::HeadlessRendering) == 0U, "Recording compute commands after rendering within a single frame is not allowed");
+		NAP_ASSERT_MSG((frame.mQueueSubmitOps & EQueueSubmitOp::Rendering) == 0, "Recording compute commands after rendering within a single frame is not allowed");
+		NAP_ASSERT_MSG((frame.mQueueSubmitOps & EQueueSubmitOp::HeadlessRendering) == 0, "Recording compute commands after rendering within a single frame is not allowed");
 
 		// Reset command buffer for current frame
 		VkCommandBuffer compute_command_buffer = frame.mComputeCommandBuffer;
