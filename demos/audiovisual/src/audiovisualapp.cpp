@@ -69,7 +69,11 @@ namespace nap
 		if (!error.check(mWorldEntity != nullptr, "unable to find entity with name: %s", "WorldEntity"))
 			return false;
 
+		// Cache mask
 		mLitRenderMask = mRenderService->findRenderMask("Lit");
+
+		// Reset first frame flag on resource reload
+		mResourceManager->mPostResourcesLoadedSignal.connect(mReloadSlot);
 
 		// All done!
 		return true;
@@ -172,12 +176,13 @@ namespace nap
 			// Get camera to render with
 			auto& cam = mRenderCameraEntity->getComponent<CameraComponentInstance>();
 
-			// Get composite component responsible for rendering final texturedddddd
-			auto* composite_comp = mRenderEntity->findComponentByID<RenderToTextureComponentInstance>("BlendTogether");
+			// Get render chroma component responsible for rendering final texture
+			auto* chroma_comp = mRenderEntity->findComponentByID<RenderToTextureComponentInstance>("RenderChroma");
+			assert(chroma_comp != nullptr);
 
 			// Render composite component
 			// The nap::RenderToTextureComponentInstance transforms a plane to match the window dimensions and applies the texture to it.
-			mRenderService->renderObjects(*mRenderWindow, cam, { composite_comp });
+			mRenderService->renderObjects(*mRenderWindow, cam, { chroma_comp });
 		
 			// GUI
 			if (!mHideGUI)

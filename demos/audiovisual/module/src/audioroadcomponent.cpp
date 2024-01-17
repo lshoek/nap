@@ -134,7 +134,12 @@ namespace nap
 			mComputeNormalsInstance->setInvocations(invocation_count);
 		}
 
+		// Check amplitude buffer
+		if (!errorState.check(mAmpsUniform->getNumElements() <= mFFT->getFFTBuffer().getBinCount(), "The FFT bin count (%d) must be equal to or higher than the element count of the `amps` array uniform (%d)", mFFT->getFFTBuffer().getBinCount(), mAmpsUniform->getNumElements()))
+			return false;
+
 		// Triangles
+		// Each three elements lists three indices of a triangle. Note that triangle index =/= vertex index.
 		{
 			mTriangleBuffer = std::make_unique<GPUBufferUInt>(*getEntityInstance()->getCore(), EMemoryUsage::Static, true);
 
@@ -160,6 +165,7 @@ namespace nap
 		}
 
 		// Adjacency
+		// Each six elements lists up to six neighboring triangle (indices)
 		{
 			static const uint sMaxAdjacentTrisPerVert = 6;
 			const auto& connectivity = mResource->mReferenceMesh->getConnectivityMap();
