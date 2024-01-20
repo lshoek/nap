@@ -37,11 +37,15 @@ namespace nap
 			ResourcePtr<ParameterFloat> mParameter;
 			ResourcePtr<ParameterFloat> mMultiplier;
 			ResourcePtr<ParameterFloat> mOffset;
+			ResourcePtr<ParameterFloat> mTargetOnset;
 			ResourcePtr<ParameterFloat> mDecay;
+			ResourcePtr<ParameterFloat> mStretch;
 
 			float mMinHz = 0.0f;
 			float mMaxHz = 44100.0f;
+			float mOnsetImpact = 2.0f;
 			float mSmoothTime = 0.05f;
+			uint mEvaluationSampleCount = 1000;
 		};
 
 		// Constructor
@@ -68,26 +72,45 @@ namespace nap
 		 */
 		class OnsetData
 		{
+			friend class FluxMeasurementComponentInstance;
 		public:
 			OnsetData(FluxMeasurementComponent::FilterParameterItem& item) :
 				mParameter(*item.mParameter),
 				mMultiplier(item.mMultiplier.get()),
 				mOffset(item.mOffset.get()),
+				mTargetOnset(item.mTargetOnset.get()),
 				mDecay(item.mDecay.get()),
+				mStretch(item.mStretch.get()),
+				mOnsetImpact(item.mOnsetImpact),
 				mOnsetSmoother({ 0.0f, item.mSmoothTime }),
 				mMinHz(std::clamp(item.mMinHz, 0.0f, 44100.0f)),
-				mMaxHz(std::clamp(item.mMaxHz, 0.0f, 44100.0f))
+				mMaxHz(std::clamp(item.mMaxHz, 0.0f, 44100.0f)),
+				mEvaluationSampleCount(item.mEvaluationSampleCount)
 			{ }
+
+			// Exponential Moving Average
+			float computeMovingAverage(float newValue, float& outAverage);
 
 			ParameterFloat& mParameter;
 			ParameterFloat* mMultiplier = nullptr;
 			ParameterFloat* mOffset = nullptr;
 			ParameterFloat* mDecay = nullptr;
+			ParameterFloat* mTargetOnset = nullptr;
+			ParameterFloat* mStretch = nullptr;
 
-			float mMinHz = 0.0f;
-			float mMaxHz = 44100.0f;
+			float mMinHz;
+			float mMaxHz;
+			float mOnsetImpact;
+			math::FloatSmoothOperator mOnsetSmoother;
+			math::FloatSmoothOperator mStretchSmoother{ 1.0f, 0.5f };
+			uint mEvaluationSampleCount;
+
+		private:
+			uint mSamplesEvaluated = 0;
+			float mSampleAverage = 0.0f;
 			float mOnsetValue = 0.0f;
-			math::FloatSmoothOperator mOnsetSmoother{ 0.0f, 0.05f };
+			float mVelocity = 0.0f;
+			float mAcceleration = 0.0f;
 		};
 
 		// Constructor
