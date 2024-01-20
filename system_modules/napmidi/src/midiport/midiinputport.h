@@ -23,7 +23,6 @@ namespace nap
     {
         RTTI_ENABLE(Device)
     public:
-		MidiInputPort() = default;
         MidiInputPort(MidiService& service);
 
         /**
@@ -73,5 +72,4 @@ namespace nap
     
     // Object creator used for constructing the the OSC receiver
     using MidiInputPortObjectCreator = rtti::ObjectCreator<MidiInputPort, MidiService>;
-    
 }
