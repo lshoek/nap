@@ -50,4 +50,10 @@ namespace nap
 			mFFTNode->mInput.connect(*inputPtr->getOutputForChannel(mResource->mChannel));
 		});
 	}
+
+
+	float FFTAudioNodeComponentInstance::getSampleRate() const
+	{
+		return mAudioService->getNodeManager().getSampleRate();
+	}
 }

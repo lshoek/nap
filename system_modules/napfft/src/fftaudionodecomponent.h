@@ -19,7 +19,7 @@
 namespace nap
 {
 	class FFTAudioNodeComponentInstance;
-			
+
 	/**
 	 * Component to measure the fft of the audio signal from an @AudioComponentBase.
 	 */
@@ -65,6 +65,12 @@ namespace nap
 		 * @return the FFT buffer
 		 */
 		virtual FFTBuffer& getFFTBuffer()					{ return *mFFTBuffer; }
+
+		/**
+		 * Returns the number of samples in one second.
+		 * @return the sample rate
+		 */
+		float getSampleRate() const;
 	
 	private:
 		ComponentInstancePtr<audio::AudioComponentBase> mInput = { this, &FFTAudioNodeComponent::mInput };	// Pointer to component that outputs this components audio input
