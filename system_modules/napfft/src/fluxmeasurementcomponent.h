@@ -83,8 +83,8 @@ namespace nap
 				mStretch(item.mStretch.get()),
 				mOnsetImpact(item.mOnsetImpact),
 				mOnsetSmoother({ 0.0f, item.mSmoothTime }),
-				mMinHz(std::clamp(item.mMinHz, 0.0f, 44100.0f)),
-				mMaxHz(std::clamp(item.mMaxHz, 0.0f, 44100.0f)),
+				mMinHz(item.mMinHz),
+				mMaxHz(item.mMaxHz),
 				mEvaluationSampleCount(item.mEvaluationSampleCount)
 			{ }
 

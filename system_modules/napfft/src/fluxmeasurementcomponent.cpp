@@ -95,7 +95,7 @@ namespace nap
 
 		for (auto& entry : mOnsetList)
 		{
-			const float interval = utility::interval(mFFTAudioComponent->getFFTBuffer().getBinCount()-1, 44100.0f);
+			const float interval = utility::interval(mFFTAudioComponent->getFFTBuffer().getBinCount()-1, mFFTAudioComponent->getSampleRate());
 			const uint min_bin = static_cast<uint>(entry.mMinHz / interval);
 			const uint max_bin = static_cast<uint>(entry.mMaxHz / interval);
 
