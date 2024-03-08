@@ -53,7 +53,6 @@ namespace nap
 
 	public:
 		RotateProperties mProperties;
-		bool mEnabled = true;
 	};
 
 	//////////////////////////////////////////////////////////////////////////
@@ -79,25 +78,37 @@ namespace nap
 		virtual bool init(utility::ErrorState& errorState) override;
 
 		/**
-		 * Rotates the component every tick based on the speed and exis
-		 * @param deltaTime time it took to complete last cook (seconds)
+		 * Rotates the component based on the current speed and axis
+		 * @param deltaTime frame time in seconds
 		 */
 		virtual void update(double deltaTime) override;
 
 		/**
-		* Resets rotation to be 0
-		*/
+		 * Resets rotation to be 0
+		 */
 		void reset();
 
 		/**
-		 * Enable or disable the rotation
+		 * Sets the rotation speed
+		 * @param speed rotation speed in seconds
 		 */
-		void enable(bool enable)									{ mEnabled = enable; }
+		void setSpeed(float speed)								{ mProperties.mSpeed = speed; }
 
 		/**
-		 * @return whether the component is enabled
+		 * @return the rotation speed in seconds
 		 */
-		bool isEnabled() const										{ return mEnabled; }
+		float getSpeed() const									{ return mProperties.mSpeed; }
+
+		/**
+		 * Sets the rotation axis
+		 * @param axis rotation axis
+		 */
+		void setAxis(const glm::vec3& axis)						{ mProperties.mAxis = axis; }
+
+		/**
+		 * @return the rotation axis
+		 */
+		glm::vec3 getAxis() const								{ return mProperties.mAxis; }
 
 		// Rotation properties
 		RotateProperties mProperties;
@@ -108,9 +119,6 @@ namespace nap
 
 		// Local elapsed time
 		double mElapsedTime = 0.0;
-
-		// Enable flag
-		bool mEnabled = true;
 
 		// Initial Rotation value
 		glm::quat mInitialRotate = glm::quat();
