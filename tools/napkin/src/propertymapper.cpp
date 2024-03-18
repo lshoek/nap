@@ -729,7 +729,7 @@ namespace napkin
 
 	const nap::ShaderConstantDeclaration* MaterialPropertyMapper::selectConstantDeclaration(QWidget* parent)
 	{
-		QStringList names;
+		nap::qt::StringModel::Entries names;
 		const auto& shader_decs = mShader->getConstantDeclarations();
 		std::unordered_map<std::string, const nap::ShaderConstantDeclaration*> dec_map;
 		dec_map.reserve(shader_decs.size());
@@ -738,7 +738,7 @@ namespace napkin
 			dec_map.emplace(dec.mName, &dec);
 			names << QString::fromStdString(dec.mName);
 		}
-		auto selection = nap::qt::FilterPopup::show(parent, names);
+		auto selection = nap::qt::FilterPopup::show(parent, std::move(names));
 		return selection.isEmpty() ? nullptr : dec_map[selection.toStdString()];
 	}
 

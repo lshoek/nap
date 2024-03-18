@@ -153,17 +153,6 @@ namespace nap
 		 */
 		const float getUniformScale() const				{ return mUniformScale; }
 
-		/**
-		 * @return the current transform instance properties for i.e. caching and restoring
-		 * the transform later.
-		 */
-		TransformInstanceProperties getInstanceProperties() const;
-
-		/**
-		 * Sets the instance properties of this camera
-		 */
-		void setInstanceProperties(const TransformInstanceProperties& props);
-
 	private:
 		/**
 		 * Holds if the current node is dirty
