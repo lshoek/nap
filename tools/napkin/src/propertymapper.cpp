@@ -418,7 +418,7 @@ namespace napkin
 			if (dec.mName != nap::uniform::mvpStruct)
 			{
 				dec_map.emplace(dec.mName, &dec);
-				entries <<  StringModel::Entry(QString::fromStdString(dec.mName));
+				entries << QString::fromStdString(dec.mName);
 			}
 		}
 		auto selection = nap::qt::FilterPopup::show(parent, std::move(entries));
@@ -437,7 +437,7 @@ namespace napkin
 			if (dec->mName != nap::uniform::mvpStruct)
 			{
 				dec_map.emplace(dec->mName, dec.get());
-				entries << StringModel::Entry(QString::fromStdString(dec->mName));
+				entries << QString::fromStdString(dec->mName);
 			}
 		}
 		auto selection = nap::qt::FilterPopup::show(parent, std::move(entries));
@@ -455,7 +455,7 @@ namespace napkin
 		for (const auto& dec : shader_decs)
 		{
 			dec_map.emplace(dec.mName, &dec);
-			entries << StringModel::Entry(QString::fromStdString(dec.mName));
+			entries << QString::fromStdString(dec.mName);
 		}
 		auto selection = nap::qt::FilterPopup::show(parent, std::move(entries));
 		return selection.isEmpty() ? nullptr : dec_map[selection.toStdString()];
@@ -475,7 +475,7 @@ namespace napkin
 		for (const auto& attr : vert_attrs)
 		{
 			dec_map.emplace(attr.second->mName, attr.second.get());
-			entries << StringModel::Entry(QString::fromStdString(attr.second->mName));
+			entries << QString::fromStdString(attr.second->mName);
 		}
 		auto selection = nap::qt::FilterPopup::show(parent, std::move(entries));
 		return selection.isEmpty() ? nullptr : dec_map[selection.toStdString()];
@@ -671,7 +671,7 @@ namespace napkin
 		for (const auto& dec : list)
 		{
 			dec_map.emplace(dec.mName, &dec);
-			entries << StringModel::Entry(QString::fromStdString(dec.mName));
+			entries << QString::fromStdString(dec.mName);
 		}
 		auto selection = nap::qt::FilterPopup::show(parent, std::move(entries));
 		return selection.isEmpty() ? nullptr : dec_map[selection.toStdString()];
@@ -729,16 +729,17 @@ namespace napkin
 
 	const nap::ShaderConstantDeclaration* MaterialPropertyMapper::selectConstantDeclaration(QWidget* parent)
 	{
-		nap::qt::StringModel::Entries names;
+		using namespace nap::qt;
+		StringModel::Entries entries;
 		const auto& shader_decs = mShader->getConstantDeclarations();
 		std::unordered_map<std::string, const nap::ShaderConstantDeclaration*> dec_map;
 		dec_map.reserve(shader_decs.size());
 		for (const auto& dec : shader_decs)
 		{
 			dec_map.emplace(dec.mName, &dec);
-			names << QString::fromStdString(dec.mName);
+			entries << QString::fromStdString(dec.mName);
 		}
-		auto selection = nap::qt::FilterPopup::show(parent, std::move(names));
+		auto selection = nap::qt::FilterPopup::show(parent, std::move(entries));
 		return selection.isEmpty() ? nullptr : dec_map[selection.toStdString()];
 	}
 
