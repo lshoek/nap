@@ -1217,8 +1217,16 @@ namespace nap
 
 		VkGraphicsPipelineCreateInfo pipeline_info = {};
 		pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipeline_info.stageCount = depthOnly ? 1 : 2;
 		pipeline_info.pStages = shader_stages;
+
+		// NOTE: Important project-specific change to rendering pipeline
+		// We do not need to specify the fragment shader stage if there are no additional fragment operations
+		// Here we force two stages because we want our depth-only shader programs to perform a custom alpha clipping fragment shader
+		pipeline_info.stageCount = 2;
+
+		// Main behavior
+		//pipeline_info.stageCount = depthOnly ? 1 : 2;
+
 		pipeline_info.pVertexInputState = &vertex_input_info;
 		pipeline_info.pInputAssemblyState = &input_assembly;
 		pipeline_info.pViewportState = &viewport_state;
