@@ -23,6 +23,7 @@ namespace nap
     {
         RTTI_ENABLE(Device)
     public:
+		MidiInputPort() = default;
         MidiInputPort(MidiService& service);
 
         /**
