@@ -20,6 +20,7 @@ RTTI_BEGIN_CLASS(nap::RenderVideoComponent, "Renders the output of a video playe
 	RTTI_PROPERTY("VideoPlayer",	&nap::RenderVideoComponent::mVideoPlayer,			nap::rtti::EPropertyMetaData::Required, "The video player to render to texture")
 	RTTI_PROPERTY("Samples",		&nap::RenderVideoComponent::mRequestedSamples,		nap::rtti::EPropertyMetaData::Default,	"The number of rasterization samples")
 	RTTI_PROPERTY("ClearColor",		&nap::RenderVideoComponent::mClearColor,			nap::rtti::EPropertyMetaData::Default,	"Initial target clear color")
+	RTTI_PROPERTY("Scale",			&nap::RenderVideoComponent::mScale,					nap::rtti::EPropertyMetaData::Default,	"Video scale, enabled if the shader constant SCALE is set to 1")
 RTTI_END_CLASS
 
 // nap::rendervideototexturecomponentInstance run time class definition 
@@ -110,6 +111,14 @@ namespace nap
 		mMaterialInstanceResource.mDepthMode = EDepthMode::NoReadWrite;
 		mMaterialInstanceResource.mMaterial  = video_material;
 
+		// Set the scale constant
+		if (resource->mScale != 1.0f)
+		{
+			mScaleConstant.mName = "SCALE";
+			mScaleConstant.mValue = 1;
+			mMaterialInstanceResource.mConstants.push_back(&mScaleConstant);
+		}
+
 		// Initialize video material instance, used for rendering video
 		if (!mMaterialInstance.init(*mRenderService, mMaterialInstanceResource, errorState))
 			return false;
@@ -127,6 +136,15 @@ namespace nap
 
 		if (mModelMatrixUniform == nullptr || mProjectMatrixUniform == nullptr || mViewMatrixUniform == nullptr)
 			return false;
+
+		// Fetch scale uniform if present
+		auto* ubo_struct = mMaterialInstance.getOrCreateUniform("UBO");
+		if (ubo_struct != nullptr)
+		{
+			auto* scale_uniform = ubo_struct->getOrCreateUniform<UniformFloatInstance>("scale");
+			if (scale_uniform != nullptr)
+				scale_uniform->setValue(resource->mScale);
+		}
 
 		// Get sampler inputs to update from video material
 		mYSampler = ensureSampler(uniform::video::sampler::YSampler, errorState);

@@ -4,6 +4,13 @@
 
 #version 450 core
 
+layout(constant_id = 0) const uint SCALE = 0;
+
+uniform UBO
+{
+	float scale;
+};
+
 uniform sampler2D yTexture;
 uniform sampler2D uTexture;
 uniform sampler2D vTexture;
@@ -20,9 +27,16 @@ out vec4 out_Color;
 
 void main() 
 {
-	float y = texture(yTexture, vec2(pass_Uvs.x, 1.0-pass_Uvs.y)).r;
-	float u = texture(uTexture, vec2(pass_Uvs.x, 1.0-pass_Uvs.y)).r;
-	float v = texture(vTexture, vec2(pass_Uvs.x, 1.0-pass_Uvs.y)).r;
+	vec2 uv = pass_Uvs.xy;
+	if (SCALE > 0)
+	{
+		uv = uv * 2.0 - 1.0;
+		uv = (uv * scale) * 0.5 + 0.5;
+	} 
+	
+	float y = texture(yTexture, vec2(uv.x, 1.0-uv.y)).r;
+	float u = texture(uTexture, vec2(uv.x, 1.0-uv.y)).r;
+	float v = texture(vTexture, vec2(uv.x, 1.0-uv.y)).r;
 
 	vec3 yuv = vec3(y,u,v);
 	yuv += offset;

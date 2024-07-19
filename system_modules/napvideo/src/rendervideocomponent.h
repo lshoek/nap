@@ -40,6 +40,7 @@ namespace nap
 		ResourcePtr<RenderTexture2D>	mOutputTexture = nullptr;							///< Property: 'OutputTexture' the RGB8 texture to render output to
 		ERasterizationSamples			mRequestedSamples = ERasterizationSamples::One;		///< Property: 'Samples' The number of samples used during Rasterization. For better results enable 'SampleShading'
 		RGBAColor8						mClearColor = { 255, 255, 255, 255 };				///< Property: 'ClearColor' the color that is used to clear the render target
+		float							mScale = 1.0f;										///< Property: 'Scale' the video scale
 	};
 
 
@@ -105,6 +106,7 @@ namespace nap
 		MaterialInstance			mMaterialInstance;								///< The MaterialInstance as created from the resource.
 		MaterialInstanceResource	mMaterialInstanceResource;						///< Resource used to initialize the material instance
 		RenderableMesh				mRenderableMesh;								///< Valid Plane / Material combination
+		ShaderConstant				mScaleConstant;
 		RenderService*				mRenderService = nullptr;						///< Pointer to the render service
 		UniformMat4Instance*		mModelMatrixUniform = nullptr;					///< Model matrix uniform in the material
 		UniformMat4Instance*		mProjectMatrixUniform = nullptr;				///< Projection matrix uniform in the material
