@@ -9,7 +9,6 @@
 
 // Nap includes
 #include <component.h>
-#include <parameternumeric.h>
 #include <audio/utility/safeptr.h>
 
 // Audio includes
@@ -21,7 +20,7 @@ namespace nap
 	class FFTAudioNodeComponentInstance;
 
 	/**
-	 * Component to measure the fft of the audio signal from an @AudioComponentBase.
+	 * Component to measure the fft of the audio signal from an audio component.
 	 */
 	class NAPAPI FFTAudioNodeComponent : public Component
 	{
@@ -32,7 +31,7 @@ namespace nap
 			Component() {}
 			
 		nap::ComponentPtr<audio::AudioComponentBase> mInput;		///< Property: 'Input' The component whose audio output will be measured.
-		FFTBuffer::EOverlap mOverlaps = FFTBuffer::EOverlap::One;	///< Property: 'Overlaps' Number of overlaps, more increases fft precision in excahange for performance
+		FFTBuffer::EOverlap mOverlaps = FFTBuffer::EOverlap::One;	///< Property: 'Overlaps' Number of overlaps, more increases fft precision in exchange for performance
 		int mChannel = 0;											///< Property: 'Channel' Channel of the input that will be analyzed.
 	};
 		
@@ -59,12 +58,12 @@ namespace nap
 		/**
 		 * @return the FFT buffer
 		 */
-		virtual const FFTBuffer& getFFTBuffer() const		{ return *mFFTBuffer; }
+		virtual const FFTBuffer& getFFTBuffer() const		{ assert(mFFTBuffer != nullptr); return *mFFTBuffer; }
 
 		/**
 		 * @return the FFT buffer
 		 */
-		virtual FFTBuffer& getFFTBuffer()					{ return *mFFTBuffer; }
+		virtual FFTBuffer& getFFTBuffer()					{ assert(mFFTBuffer != nullptr); return *mFFTBuffer; }
 
 		/**
 		 * Returns the number of samples in one second.
@@ -77,7 +76,6 @@ namespace nap
 
 		FFTAudioNodeComponent* mResource = nullptr;
 		audio::SafeOwner<FFTNode> mFFTNode = nullptr;														// Node that computes the FFT
-		
 		audio::AudioService* mAudioService = nullptr;
 		FFTBuffer* mFFTBuffer = nullptr;
 	};

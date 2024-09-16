@@ -9,13 +9,14 @@
 #include <nap/numeric.h>
 #include <complex>
 #include <mutex>
+#include <atomic>
 
 namespace nap
 {
 	/**
 	 * Wraps a kiss context
 	 */
-	class NAPAPI FFTBuffer
+	class NAPAPI FFTBuffer final
 	{
 		RTTI_ENABLE()
 	public:
@@ -25,7 +26,7 @@ namespace nap
 		/**
 		 * Number of overlaps (hops)
 		 */
-		enum EOverlap : uint
+		enum class EOverlap : uint
 		{
 			One		= 1,
 			Three	= 3,
@@ -76,8 +77,7 @@ namespace nap
 
 	private:
 		class KissContext;
-		struct KissContextDeleter { void operator()(KissContext* ctx) const; };
-		std::unique_ptr<KissContext, KissContextDeleter> mContext;
+		std::unique_ptr<KissContext> mContext;
 
 		std::vector<std::complex<float>> mComplexOut;				//< Complex
 		std::vector<std::complex<float>> mComplexOutAverage;		//< Complex averaged over multiple analysis hops
@@ -89,9 +89,11 @@ namespace nap
 		float mHammingWindowSum;									//< The sum of all window function coefficients
 		float mNormalizationFactor;									//< Inverse of the window sum (2/sum)
 
-		std::vector<float> mSampleBuffer;							//< The sample buffer is accessed on both the audio and main thread. Use mutex for read/write.
-		std::mutex mSampleBufferMutex;								//< The mutex for accessing the sample buffer
 
+		std::mutex mSampleBufferMutex;								//< The mutex for accessing the sample buffer
+		std::vector<float> mSampleBufferA;							//< Samples provided by the audio node
+		std::vector<float> mSampleBufferB;							//< Thread safe copy of original samples
+		std::vector<float> mSampleBufferFormatted;					//< The sample buffer before application of a window function
 		std::vector<float> mSampleBufferWindowed;					//< The sample buffer after application of a window function
 
 		uint mBinCount;												//< The number of FFT bins			
@@ -100,6 +102,6 @@ namespace nap
 		EOverlap mOverlap;											//< The number of audio buffer overlaps for FFT analysis (hops)
 		uint mHopSize;												//< The number of bins of a single hop
 
-		bool mDirty = false;										//< Amplitudes dirty checking flag, prevents redundant FFT analyses 
+		std::atomic<bool> mDirty = { false };										//< Amplitudes dirty checking flag, prevents redundant FFT analyses 
 	};
 }

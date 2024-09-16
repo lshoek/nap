@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 #pragma once
 
 #include <renderablemeshcomponent.h>
@@ -85,9 +89,6 @@ namespace nap
 
 		/**
 		 * Initialize AudioRoadComponentInstance based on the AudioRoadComponent resource
-		 * @param entityCreationParams when dynamically creating entities on initialization, add them to this this list.
-		 * @param errorState should hold the error message when initialization fails
-		 * @return if the AudioRoadComponentInstance is initialized successfully
 		 */
 		virtual bool init(utility::ErrorState& errorState) override;
 
