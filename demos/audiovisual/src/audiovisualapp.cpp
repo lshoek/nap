@@ -8,17 +8,14 @@
 #include <utility/fileutils.h>
 #include <nap/logger.h>
 #include <inputrouter.h>
-#include <rendergnomoncomponent.h>
 #include <perspcameracomponent.h>
-#include <orthocameracomponent.h>
-#include <renderablemeshcomponent.h>
 #include <computecomponent.h>
 #include <parametergui.h>
 #include <depthsorter.h>
 #include <renderdofcomponent.h>
 #include <rendertotexturecomponent.h>
 
-RTTI_BEGIN_CLASS_NO_DEFAULT_CONSTRUCTOR(nap::audiovisualApp)
+RTTI_BEGIN_CLASS_NO_DEFAULT_CONSTRUCTOR(nap::AudioVisualApp)
 	RTTI_CONSTRUCTOR(nap::Core&)
 RTTI_END_CLASS
 
@@ -28,64 +25,99 @@ namespace nap
 	 * Initialize all the resources and instances used for drawing
 	 * slowly migrating all functionality to NAP
 	 */
-	bool audiovisualApp::init(utility::ErrorState& error)
+	bool AudioVisualApp::init(utility::ErrorState& errorState)
 	{
 		// Retrieve services
-		mRenderService			= getCore().getService<nap::RenderService>();
-		mRenderAdvancedService	= getCore().getService<nap::RenderAdvancedService>();
-		mSceneService			= getCore().getService<nap::SceneService>();
-		mInputService			= getCore().getService<nap::InputService>();
-		mGuiService				= getCore().getService<nap::IMGuiService>();
+		mRenderService			= getCore().getService<RenderService>();
+		mRenderAdvancedService	= getCore().getService<RenderAdvancedService>();
+		mSceneService			= getCore().getService<SceneService>();
+		mInputService			= getCore().getService<InputService>();
+		mGuiService				= getCore().getService<IMGuiService>();
 
 		// Fetch the resource manager
 		mResourceManager = getCore().getResourceManager();
 
 		// Get the render window
-		mRenderWindow = mResourceManager->findObject<nap::RenderWindow>("Window");
-		if (!error.check(mRenderWindow != nullptr, "unable to find render window with name: %s", "Window"))
+		mRenderWindow = mResourceManager->findObject<RenderWindow>("Window");
+		if (!errorState.check(mRenderWindow != nullptr, "unable to find render window with name: %s", "Window"))
 			return false;
 
 		// Get the render target
-		mRenderTarget = mResourceManager->findObject<nap::RenderTarget>("RenderTarget");
-		if (!error.check(mRenderTarget != nullptr, "unable to find render target with name: %s", "RenderTarget"))
+		mRenderTarget = mResourceManager->findObject<RenderTarget>("RenderTarget");
+		if (!errorState.check(mRenderTarget != nullptr, "unable to find render target with name: %s", "RenderTarget"))
 			return false;
 
 		// Get the scene that contains our entities and components
 		mScene = mResourceManager->findObject<Scene>("Scene");
-		if (!error.check(mScene != nullptr, "unable to find scene with name: %s", "Scene"))
+		if (!errorState.check(mScene != nullptr, "unable to find scene with name: %s", "Scene"))
 			return false;
 
 		// Get the camera entity
 		mCameraEntity = mScene->findEntity("CameraEntity");
-		if (!error.check(mCameraEntity != nullptr, "unable to find entity with name: %s", "CameraEntity"))
+		if (!errorState.check(mCameraEntity != nullptr, "unable to find entity with name: %s", "CameraEntity"))
 			return false;
 
 		mRenderCameraEntity = mScene->findEntity("RenderCameraEntity");
-		if (!error.check(mRenderCameraEntity != nullptr, "unable to find entity with name: %s", "RenderCameraEntity"))
+		if (!errorState.check(mRenderCameraEntity != nullptr, "unable to find entity with name: %s", "RenderCameraEntity"))
 			return false;
 
-
 		mRenderEntity = mScene->findEntity("RenderEntity");
-		if (!error.check(mRenderEntity != nullptr, "unable to find entity with name: %s", "RenderEntity"))
+		if (!errorState.check(mRenderEntity != nullptr, "unable to find entity with name: %s", "RenderEntity"))
 			return false;
 
 		mWorldEntity = mScene->findEntity("WorldEntity");
-		if (!error.check(mWorldEntity != nullptr, "unable to find entity with name: %s", "WorldEntity"))
+		if (!errorState.check(mWorldEntity != nullptr, "unable to find entity with name: %s", "WorldEntity"))
 			return false;
 
 		// Cache mask
 		mLitRenderMask = mRenderService->getRenderMask("Lit");
 
-		// Reset first frame flag on resource reload
+		// Pre-render cube map
+		if (!preRenderCubeMap(errorState))
+			return false;
+
+		// Connect reload slot
 		mResourceManager->mPostResourcesLoadedSignal.connect(mReloadSlot);
 
 		// All done!
 		return true;
 	}
-	
-	
+
+
+	bool AudioVisualApp::preRenderCubeMap(utility::ErrorState& errorState)
+	{
+		auto cube_map = mResourceManager->findObject<CubeRenderTarget>("CubeRenderTarget");
+		if (!errorState.check(cube_map != nullptr, "unable to find cube render target with name: %s", "CubeRenderTarget"))
+			return false;
+
+		// Filter components to render into the cube map with the environment mask
+		std::vector<RenderableComponentInstance*> comps;
+		mScene->getRootEntity().getComponentsOfTypeRecursive(comps);
+		auto env_mask = mRenderService->getRenderMask("Environment");
+		auto env_comps = mRenderService->filterObjects(comps, env_mask);
+
+		// Queue a headless render command to carry out next time beginHeadlessRecording() is called
+		mRenderService->queueHeadlessCommand([cube=cube_map, comps=env_comps](RenderService& renderService)
+		{
+			// Render the environment components into the cube map
+			cube->render([rs=&renderService, comps=comps](CubeRenderTarget& target, const glm::mat4& projection, const glm::mat4& view) {
+				rs->renderObjects(target, projection, view, { comps }, std::bind(&sorter::sortObjectsByDepth, std::placeholders::_1, std::placeholders::_2));
+			});
+		});
+		return true;
+	}
+
+
+	void AudioVisualApp::reload()
+	{
+		utility::ErrorState error_state;
+		if (!preRenderCubeMap(error_state))
+			nap::Logger::error(error_state.toString());
+	}
+
+
 	// Update app
-	void audiovisualApp::update(double deltaTime)
+	void AudioVisualApp::update(double deltaTime)
 	{
 		// Use a default input router to forward input events (recursively) to all input components in the default scene
 		nap::DefaultInputRouter input_router(true);
@@ -105,7 +137,7 @@ namespace nap
 	
 	
 	// Render app
-	void audiovisualApp::render()
+	void AudioVisualApp::render()
 	{
 		// Signal the beginning of a new frame, allowing it to be recorded.
 		// The system might wait until all commands that were previously associated with the new frame have been processed on the GPU.
@@ -127,34 +159,6 @@ namespace nap
 		// Headless
 		if (mRenderService->beginHeadlessRecording())
 		{
-			if (mFirstFrame)
-			{
-				auto cube_targets = mResourceManager->getObjects<CubeRenderTarget>();
-				if (!cube_targets.empty())
-				{
-					assert(cube_targets.front() != nullptr);
-					auto target = cube_targets.front();
-
-					for (auto* comp : render_comps)
-					{
-						if (comp->get_type() != RTTI_OF(RenderableMeshComponentInstance))
-							continue;
-
-						auto* resource = comp->getComponent<RenderableMeshComponent>();
-						if (resource == nullptr)
-							continue;
-
-						if (resource->mID == "RenderStars")
-						{
-							auto& perp_cam = mCameraEntity->getComponent<PerspCameraComponentInstance>();
-							target->render([rs = mRenderService, stars = comp](CubeRenderTarget& target, const glm::mat4& projection, const glm::mat4& view) {
-								rs->renderObjects(target, projection, view, { stars }, std::bind(&sorter::sortObjectsByDepth, std::placeholders::_1, std::placeholders::_2));
-							});
-						}
-					}
-				}
-			}
-
 			// Offscreen color pass -> Render all available geometry to the color texture bound to the render target.
 			mRenderTarget->beginRendering();
 			utility::ErrorState error_state;
@@ -200,22 +204,21 @@ namespace nap
 
 		// Proceed to next frame
 		mRenderService->endFrame();
-		mFirstFrame = false;
 	}
 	
 
-	void audiovisualApp::windowMessageReceived(WindowEventPtr windowEvent)
+	void AudioVisualApp::windowMessageReceived(WindowEventPtr windowEvent)
 	{
 		mRenderService->addEvent(std::move(windowEvent));
 	}
 	
 	
-	void audiovisualApp::inputMessageReceived(InputEventPtr inputEvent)
+	void AudioVisualApp::inputMessageReceived(InputEventPtr inputEvent)
 	{
 		if (inputEvent->get_type().is_derived_from(RTTI_OF(nap::KeyPressEvent)))
 		{
 			// If we pressed escape, quit the loop
-			nap::KeyPressEvent* press_event = static_cast<nap::KeyPressEvent*>(inputEvent.get());
+			auto* press_event = static_cast<nap::KeyPressEvent*>(inputEvent.get());
 			if (press_event->mKey == nap::EKeyCode::KEY_ESCAPE)
 				quit();
 
@@ -232,7 +235,7 @@ namespace nap
 	}
 
 	
-	int audiovisualApp::shutdown()
+	int AudioVisualApp::shutdown()
 	{
 		return 0;
 	}
