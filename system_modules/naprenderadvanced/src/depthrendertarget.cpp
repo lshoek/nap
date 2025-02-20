@@ -6,11 +6,11 @@
 #include "depthrendertarget.h"
 #include "rendertexture2d.h"
 #include "renderservice.h"
+#include "renderadvancedutils.h"
 
 // External Includes
 #include <nap/core.h>
 #include <nap/logger.h>
-
 
 RTTI_BEGIN_CLASS_NO_DEFAULT_CONSTRUCTOR(nap::DepthRenderTarget, "Depth texture target for render operations")
 	RTTI_CONSTRUCTOR(nap::Core&)
@@ -22,6 +22,23 @@ RTTI_END_CLASS
 
 namespace nap
 {
+	//////////////////////////////////////////////////////////////////////////
+	// Static functions
+	//////////////////////////////////////////////////////////////////////////
+
+	// Create the depth image and view
+	static bool createDepthResource(const RenderService& renderer, VkExtent2D targetSize, VkFormat depthFormat, VkSampleCountFlagBits sampleCount, VkImageUsageFlags usage, ImageData& outImage, utility::ErrorState& errorState)
+	{
+		if (!create2DImage(renderer.getVulkanAllocator(), targetSize.width, targetSize.height, depthFormat, 1, sampleCount, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | usage, VMA_MEMORY_USAGE_GPU_ONLY, outImage.mImage, outImage.mAllocation, outImage.mAllocationInfo, errorState))
+			return false;
+
+		if (!create2DImageView(renderer.getDevice(), outImage.getImage(), depthFormat, 1, VK_IMAGE_ASPECT_DEPTH_BIT, outImage.mView, errorState))
+			return false;
+
+		return true;
+	}
+
+
 	//////////////////////////////////////////////////////////////////////////
 	// DepthRenderTarget
 	//////////////////////////////////////////////////////////////////////////
@@ -39,6 +56,8 @@ namespace nap
 	
 		if (mRenderPass != VK_NULL_HANDLE)
 			vkDestroyRenderPass(mRenderService->getDevice(), mRenderPass, nullptr);
+
+		utility::destroyImageAndView(mDepthImage, mRenderService->getDevice(), mRenderService->getVulkanAllocator());
 	}
 
 
@@ -63,23 +82,36 @@ namespace nap
 		VkExtent2D framebuffer_size = { size.x, size.y };
 
 		// Create depth render pass based on format
-		if (!createDepthOnlyRenderPass(mRenderService->getDevice(), mDepthTexture->getFormat(), mRenderPass, errorState))
+		if (!createDepthOnlyRenderPass(mRenderService->getDevice(), mDepthTexture->getFormat(), mRasterizationSamples, getFinalLayout(), mRenderPass, errorState))
 			return false;
 
-		// Bind textures as attachments
-		const auto attachment = std::as_const(*mDepthTexture).getHandle().getView();
+		// Store as attachments
+		std::array<VkImageView, 2> attachments { std::as_const(*mDepthTexture).getHandle().getView(), VK_NULL_HANDLE };
+
+		uint attachment_count = 1;
+		if (mRasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
+		{
+			// Create depth image data and hook up to depth attachment
+			if (!createDepthResource(*mRenderService, framebuffer_size, mDepthTexture->getFormat(), mRasterizationSamples, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, mDepthImage, errorState))
+				return false;
+
+			attachments[0] = mDepthImage.getView();
+			attachments[1] = std::as_const(*mDepthTexture).getHandle().getView();
+			attachment_count = 2;
+		}
 
 		// Create framebuffer
-		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = mRenderPass;
-		framebufferInfo.attachmentCount = 1;
-		framebufferInfo.pAttachments = &attachment;
-		framebufferInfo.width = framebuffer_size.width;
-		framebufferInfo.height = framebuffer_size.height;
-		framebufferInfo.layers = 1;
+		VkFramebufferCreateInfo framebuffer_info = {
+			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.renderPass = mRenderPass,
+			.attachmentCount = attachment_count,
+			.pAttachments = attachments.data(),
+			.width = framebuffer_size.width,
+			.height = framebuffer_size.height,
+			.layers = 1
+		};
 
-		if (!errorState.check(vkCreateFramebuffer(mRenderService->getDevice(), &framebufferInfo, nullptr, &mFramebuffer) == VK_SUCCESS, "Failed to create framebuffer"))
+		if (!errorState.check(vkCreateFramebuffer(mRenderService->getDevice(), &framebuffer_info, nullptr, &mFramebuffer) == VK_SUCCESS, "Failed to create framebuffer"))
 			return false;
 
 		return true;
@@ -88,40 +120,43 @@ namespace nap
 
 	void DepthRenderTarget::beginRendering()
 	{
-		VkClearValue clear_value = {};
-		clear_value.depthStencil = { mClearValue, 0 };
+		VkClearValue clear_value = {
+			.depthStencil = { mClearValue, 0 }
+		};
 
-		glm::ivec2 size = mDepthTexture->getSize();
-		const glm::ivec2 offset = { 0, 0 };
+		glm::vec2 size = mDepthTexture->getSize();
 
 		// Setup render pass
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = mRenderPass;
-		renderPassInfo.framebuffer = mFramebuffer;
-		renderPassInfo.renderArea.offset = { offset.x, offset.y };
-		renderPassInfo.renderArea.extent = { static_cast<uint>(size.x), static_cast<uint>(size.y) };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clear_value;
+		VkRenderPassBeginInfo render_pass_info = {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.renderPass = mRenderPass,
+			.framebuffer = mFramebuffer,
+			.renderArea = {
+				.offset = { 0, 0 },
+				.extent = {static_cast<uint>(size.x), static_cast<uint>(size.y) }
+			},
+			.clearValueCount = 1,
+			.pClearValues = &clear_value
+		};
 
 		// Begin render pass
-		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
 		// Ensure scissor and viewport are covering complete area
-		VkRect2D rect;
-		rect.offset.x = offset.x;
-		rect.offset.y = offset.y;
-		rect.extent.width = size.x;
-		rect.extent.height = size.y;
+		VkRect2D rect = {
+			.offset = { 0, 0 },
+			.extent = { static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y) }
+		};
 		vkCmdSetScissor(mRenderService->getCurrentCommandBuffer(), 0, 1, &rect);
 
-		VkViewport viewport = {};
-		viewport.x = static_cast<float>(offset.x);
-		viewport.y = size.y + static_cast<float>(offset.y);
-		viewport.width = size.x;
-		viewport.height = -size.y;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
+		VkViewport viewport = {
+			.x = 0.0f,
+			.y = size.y,
+			.width = size.x,
+			.height = -size.y,
+			.minDepth = 0.0f,
+			.maxDepth = 1.0f
+		};
 		vkCmdSetViewport(mRenderService->getCurrentCommandBuffer(), 0, 1, &viewport);
 	}
 
