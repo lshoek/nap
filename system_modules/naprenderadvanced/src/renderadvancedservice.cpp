@@ -145,7 +145,7 @@ namespace nap
 		mShadowTextureDummy->mID = utility::stringFormat("%s_Dummy_%s", RTTI_OF(DepthRenderTexture2D).get_name().to_string().c_str(), math::generateUUID().c_str());
 		mShadowTextureDummy->mWidth = 1;
 		mShadowTextureDummy->mHeight = 1;
-		mShadowTextureDummy->mUsage = Texture::EUsage::Static;
+		mShadowTextureDummy->mUsage = Texture2D::EUsage::Internal;
 		mShadowTextureDummy->mDepthFormat = configuration->mDepthFormat;
 		mShadowTextureDummy->mColorSpace = EColorSpace::Linear;
 		mShadowTextureDummy->mClearValue = 1.0f;
@@ -482,6 +482,7 @@ namespace nap
             auto* view_matrix_array = shadow_struct->getOrCreateUniform<UniformMat4ArrayInstance>(uniform::shadow::lightViewProjectionMatrix); assert(view_matrix_array != nullptr);
             auto* near_far_array = shadow_struct->getOrCreateUniform<UniformVec2ArrayInstance>(uniform::shadow::nearFar); assert(near_far_array != nullptr);
             auto* strength_array = shadow_struct->getOrCreateUniform<UniformFloatArrayInstance>(uniform::shadow::strength); assert(strength_array != nullptr);
+            auto* spread_array = shadow_struct->getOrCreateUniform<UniformFloatArrayInstance>(uniform::shadow::spread); assert(spread_array != nullptr);
 			auto* shadow_flags = shadow_struct->getOrCreateUniform<UniformUIntInstance>(uniform::shadow::flags); assert(shadow_flags != nullptr);
             auto* light_count = shadow_struct->getOrCreateUniform<UniformUIntInstance>(uniform::shadow::count); assert(light_count != nullptr);
 
@@ -507,6 +508,7 @@ namespace nap
                     glm::vec2 near_far = { light->getCamera().getNearClippingPlane(), light->getCamera().getFarClippingPlane() };
                     near_far_array->setValue(near_far, light_index);
                     strength_array->setValue(light->getShadowStrength(), light_index);
+                    spread_array->setValue(light->getShadowSpread(), light_index);
 
                     // Fetch flags
                     auto it_flags = mLightFlagsMap.find(light);
@@ -661,7 +663,7 @@ namespace nap
 				shadow_map->mWidth = light->getShadowMapSize();
 				shadow_map->mHeight = light->getShadowMapSize();
 				shadow_map->mDepthFormat = configuration->mDepthFormat;
-				shadow_map->mUsage = Texture::EUsage::Static;
+				shadow_map->mUsage = Texture2D::EUsage::Internal;
 				shadow_map->mColorSpace = EColorSpace::Linear;
 				shadow_map->mClearValue = 1.0f;
 				shadow_map->mFill = true;
@@ -818,8 +820,8 @@ namespace nap
 		assert(entry.second);
 
 		// Queue a graphics command to pre-render the cube map
-		mRenderService->queueHeadlessCommand([this, cm = &cubemap](RenderService& renderService) {
-
+		mRenderService->queueHeadlessCommand([this, cm = &cubemap](RenderService& renderService)
+		{
 			auto it = mCubeMapTargets.find(cm);
 			assert(it != mCubeMapTargets.end());
 
