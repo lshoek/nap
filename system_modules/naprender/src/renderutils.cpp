@@ -14,6 +14,7 @@ RTTI_BEGIN_ENUM(nap::ERasterizationSamples)
 	RTTI_ENUM_VALUE(nap::ERasterizationSamples::Max,		"Max")
 RTTI_END_ENUM;
 
+
 namespace nap
 {
 	namespace utility

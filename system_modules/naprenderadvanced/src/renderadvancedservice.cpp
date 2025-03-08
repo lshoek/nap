@@ -21,7 +21,6 @@
 #include <parametervec.h>
 #include <parametercolor.h>
 #include <cubemapfromfile.h>
-#include <textureutils.h>
 
 RTTI_BEGIN_CLASS(nap::RenderAdvancedServiceConfiguration)
 	RTTI_PROPERTY("ShadowDepthFormat",		&nap::RenderAdvancedServiceConfiguration::mDepthFormat,			nap::rtti::EPropertyMetaData::Default, "Shadow texture depth format")
@@ -257,19 +256,6 @@ namespace nap
 					target->beginRendering();
 					mRenderService->renderObjects(*target, light->getCamera(), render_comps);
 					target->endRendering();
-
-					utility::transitionImageLayout(
-						mRenderService->getCurrentCommandBuffer(),
-						target->getDepthTexture().getHandle().getImage(),
-						VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-						VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-						VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-						VK_ACCESS_SHADER_READ_BIT,
-						VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-						0, 1, VK_IMAGE_ASPECT_DEPTH_BIT
-					);
-
 					break;
 				}
 				case EShadowMapType::Cube:

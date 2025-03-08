@@ -76,16 +76,6 @@ namespace nap
 		bool NAPAPI createBuffer(VmaAllocator allocator, uint32 size, VkBufferUsageFlags bufferUsage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocationFlags, BufferData& outBuffer, utility::ErrorState& errorState);
 
 		/**
-		 * Creates a single or multi-sample renderpass based on rasterization samples and color/depth formats.
-		 */
-		bool NAPAPI createRenderPass(VkDevice device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlagBits samples, VkImageLayout targetLayout, bool consumeDepth, VkRenderPass& renderPass, utility::ErrorState& errorState);
-
-		/**
-		 * Creates a single or multi-sample depth-only renderpass based depth format.
-		 */
-		bool NAPAPI createDepthOnlyRenderPass(VkDevice device, VkFormat depthFormat, VkRenderPass& renderPass, utility::ErrorState& errorState);
-
-		/**
 		 * Destroys a Vulkan buffer
 		 */
 		void NAPAPI destroyBuffer(VmaAllocator allocator, BufferData& buffer);
