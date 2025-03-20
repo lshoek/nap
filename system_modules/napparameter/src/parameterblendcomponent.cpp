@@ -116,6 +116,9 @@ namespace nap
 
 	float ParameterBlendComponentInstance::getBlendValue()
 	{
+        if (mPresetBlendTime->mValue <= math::epsilon<float>())
+            return 1.0f;
+
 		return math::fit<float>(mElapsedTime, 0.0f, mPresetBlendTime->mValue, 0.0f, 1.0f);
 	}
 
