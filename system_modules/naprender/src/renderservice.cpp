@@ -1728,7 +1728,7 @@ namespace nap
 #endif // NDEBUG
 
 		// Create Vulkan Instance together with required extensions and layers
-		mAPIVersion = VK_API_VERSION_1_0;
+		mAPIVersion = VK_MAKE_API_VERSION(0, 1, 2, 0);
 		if (!createVulkanInstance(found_layers, required_instance_extensions, mAPIVersion, mInstance, error))
 			return false;
 
@@ -1832,6 +1832,7 @@ namespace nap
 				errorState.fail(SDL_GetError());
 				return false;
 			}
+			
 			// Get all available vulkan instance extensions, required to create a presentable surface.
 			// It also provides a way to determine whether a queue family in a physical device supports presenting to particular surface.
 			if (!getSurfaceInstanceExtensions(dummy_window.mWindow, instance_extensions, errorState))
