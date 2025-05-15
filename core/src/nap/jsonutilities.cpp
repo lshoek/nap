@@ -9,6 +9,8 @@
 #include <rtti/jsonreader.h>
 #include <nap/numeric.h>
 
+#include "logger.h"
+
 namespace nap::utility
 {
 	 bool deserializeRecursive(const rapidjson::Value& node, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState)
@@ -49,13 +51,47 @@ namespace nap::utility
 			auto prop_type = prop.get_type();
 
 			// Handle (nested) objects
-			if (prop_type.is_class() && prop_type != RTTI_OF(std::string))
+			if (prop_type.is_class() && prop_type != RTTI_OF(std::string) && !prop_type.is_array())
 			{
 				auto nested_prop = prop.get_value(instance);
 				if (!deserializeRecursive(json_field, nested_prop, lenient, errorState))
 					return false;
 
 				if (!errorState.check(prop.set_value(instance, nested_prop), "Error setting value for `%s`", prop_name.c_str()))
+					return false;
+
+				continue;
+			}
+
+			// Handle array properties
+			if (prop_type.is_array() && json_field.IsArray())
+			{
+				// Get value type and create array view
+				rtti::Variant value;
+				value = prop.get_value(instance);
+				auto array_view = value.create_array_view();
+				if (!errorState.check(array_view.is_valid(), "Failed to create array view for property `%s`", prop_name.c_str()))
+					return false;
+
+				// Create array view and set correct size
+				size_t size = json_field.Size();
+				array_view.set_size(size);
+				for (std::size_t index = 0; index < size; ++index)
+				{
+					// Extract wrapped value from array view
+					auto wrapped_value = array_view.get_value_as_ref(index).extract_wrapped_value();
+
+					// Deserialize the value
+					if (!deserializeRecursive(json_field[index], wrapped_value, lenient, errorState))
+						return false;
+
+					// Set the value in the array view
+					if (!errorState.check(array_view.set_value(index, wrapped_value), "Failed to set array property `%s`", prop_name.c_str()))
+						return false;
+				}
+
+				// Set the value back to the property
+				if (!errorState.check(prop.set_value(instance, value), "Failed to set array property `%s`", prop_name.c_str()))
 					return false;
 
 				continue;
