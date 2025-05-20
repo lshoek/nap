@@ -13,30 +13,62 @@
 
 namespace nap::utility
 {
-	bool deserializeRecursive(const rapidjson::Value& node, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState);
-	bool deserializePrimitive(const rapidjson::Value& value, rtti::Property& property, rtti::Variant& outVariant, utility::ErrorState& errorState);
-	bool deserializeArray(const rapidjson::GenericArray<true, rapidjson::Value>& array, rtti::Property& prop, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState);
-	bool deserializePrimitiveArray(const rapidjson::Value& value, const size_t index, rttr::variant_array_view& outArrayView, utility::ErrorState& errorState);
-
-	bool deserializeArray(const rapidjson::GenericArray<true, rapidjson::Value>& array, rtti::Property& prop, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState)
+	static bool deserializePrimitive(const rapidjson::Value& value, rtti::Property& property, rtti::Variant& outVariant, utility::ErrorState& errorState)
 	{
-		// create instance
+		// Handle primitive types and string
+		// Verify the property type and json field are equal data types so the property can be assigned
+		bool success = false;
+		auto type = property.get_type();
+
+		if (type == RTTI_OF(bool) && value.IsBool())
+			success = property.set_value(outVariant, value.GetBool());
+
+		else if (type == RTTI_OF(std::string) && value.IsString())
+			success = property.set_value(outVariant, std::string(value.GetString(), value.GetStringLength()));
+
+		else if (type == RTTI_OF(uint64) && value.IsUint64())
+			success = property.set_value(outVariant, value.GetUint64());
+
+		else if (type == RTTI_OF(uint32) && value.IsUint())
+			success = property.set_value(outVariant, value.GetUint());
+
+		else if (type == RTTI_OF(int64) && value.IsInt64())
+			success = property.set_value(outVariant, value.GetInt64());
+
+		else if (type == RTTI_OF(int32) && value.IsInt())
+			success = property.set_value(outVariant, value.GetInt());
+
+		else if (type == RTTI_OF(float) && value.IsFloat())
+			success = property.set_value(outVariant, value.GetFloat());
+
+		else if (type == RTTI_OF(double) && value.IsDouble())
+			success = property.set_value(outVariant, value.GetDouble());
+
+		if (!errorState.check(success, "Type mismatch or unhandled type for JSON key `%s`", property.get_name().to_string().c_str()))
+			return false;
+
+		return success;
+	}
+
+
+	static bool deserializeArray(const rapidjson::GenericArray<true, rapidjson::Value>& array, rtti::Property& prop, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState)
+	{
+		// Create instance
 		rtti::Instance instance = outVariant;
 
-		// get name
-		auto prop_name = prop.get_name().to_string();
+		// Get name
+		const auto prop_name = prop.get_name().to_string();
 
 		// Get value type and create array view
-		rtti::Variant value;
-		value = prop.get_value(instance);
+		rtti::Variant value = prop.get_value(instance);
 		auto array_view = value.create_array_view();
 		if (!errorState.check(array_view.is_valid(), "Failed to create array view for property `%s`", prop_name.c_str()))
 			return false;
 
 		// Create array view and set correct size
-		size_t size = array.Size();
+		const size_t size = array.Size();
 		array_view.set_size(size);
-		for (std::size_t index = 0; index < size; ++index)
+		for (size_t index = 0; index < size; ++index)
 		{
 			// Extract wrapped value from array view
 			auto wrapped_value = array_view.get_value_as_ref(index).extract_wrapped_value();
@@ -51,10 +83,12 @@ namespace nap::utility
 				// Set the value in the array view
 				if (!errorState.check(array_view.set_value(index, wrapped_value), "Failed to set array property `%s`", prop_name.c_str()))
 					return false;
-			}else
+			}
+			else
 			{
 				// Deserialize the primitive value in arrays
-				if (!deserializePrimitiveArray(array[index], index, array_view, errorState))
+				auto variant = array_view.get_value_as_ref(index);
+				if (!deserializePrimitive(array[index], prop, variant, errorState))
 					return false;
 			}
 		}
@@ -67,90 +101,8 @@ namespace nap::utility
 	}
 
 
-	bool deserializePrimitive(const rapidjson::Value& value, rtti::Property& property, rtti::Variant& outVariant, utility::ErrorState& errorState)
+	bool deserializeRecursive(const rapidjson::Value& node, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState)
 	{
-		// Handle primitive types and string
-		// Verify the property type and json field are equal data types so the property can be assigned
-		bool success = false;
-		auto type = property.get_type();
-
-		if (type == RTTI_OF(bool) && value.IsBool())
-			success = property.set_value(outVariant, value.GetBool());
-
-		else if (type == RTTI_OF(std::string) && value.IsString())
-			success = property.set_value(outVariant, std::string(value.GetString()));
-
-		else if (type == RTTI_OF(nap::uint64) && value.IsUint64())
-			success = property.set_value(outVariant, value.GetUint64());
-
-		else if (type == RTTI_OF(uint32) && value.IsUint())
-			success = property.set_value(outVariant, value.GetUint());
-
-		else if (type == RTTI_OF(int64) && value.IsInt64())
-			success = property.set_value(outVariant, value.GetInt64());
-
-		else if (type == RTTI_OF(int32) && value.IsInt())
-			success = property.set_value(outVariant, value.GetInt());
-
-		if (type == RTTI_OF(float))
-		{
-			if (value.IsNumber())
-				success = property.set_value(outVariant, value.GetFloat());
-		}else if  (type == RTTI_OF(double))
-		{
-			if(value.IsDouble())
-				success = property.set_value(outVariant, value.GetDouble());
-		}
-
-		if (!errorState.check(success, "Type mismatch or unhandled type for JSON key `%s`", property.get_name().to_string().c_str()))
-			return false;
-
-		return success;
-	}
-
-	bool deserializePrimitiveArray(const rapidjson::Value& value, const size_t index, rttr::variant_array_view& outArrayView, utility::ErrorState& errorState)
-	{
-		// Handle primitive types and string
-		// Verify the property type and json field are equal data types so the property can be assigned
-		bool success = false;
-		auto type = outArrayView.get_rank_type(1);
-
-		if (type == RTTI_OF(bool) && value.IsBool())
-			success = outArrayView.set_value(index, value.GetBool());
-
-		else if (type == RTTI_OF(std::string) && value.IsString())
-			success = outArrayView.set_value(index, std::string(value.GetString()));
-
-		else if (type == RTTI_OF(nap::uint64) && value.IsUint64())
-			success = outArrayView.set_value(index, value.GetUint64());
-
-		else if (type == RTTI_OF(uint32) && value.IsUint())
-			success = outArrayView.set_value(index, value.GetUint());
-
-		else if (type == RTTI_OF(int64) && value.IsInt64())
-			success = outArrayView.set_value(index, value.GetInt64());
-
-		else if (type == RTTI_OF(int32) && value.IsInt())
-			success = outArrayView.set_value(index, value.GetInt());
-
-		if (type == RTTI_OF(float))
-		{
-			if (value.IsNumber())
-				success = outArrayView.set_value(index, value.GetFloat());
-		}else if  (type == RTTI_OF(double))
-		{
-			if(value.IsDouble())
-				success = outArrayView.set_value(index, value.GetDouble());
-		}
-
-		if (!errorState.check(success, "Type mismatch or unhandled type for JSON array index `%i`", index))
-			return false;
-
-		return success;
-	}
-
-	 bool deserializeRecursive(const rapidjson::Value& node, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState)
-	 {
 		if (!errorState.check(node.IsObject(), "Node is not an object"))
 			return false;
 
