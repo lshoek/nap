@@ -44,6 +44,10 @@ namespace nap::utility
 		else if (type == RTTI_OF(double) && value.IsDouble())
 			success = property.set_value(outVariant, value.GetDouble());
 
+		// Attempt an implicit conversion as fallback
+		else if (type.is_arithmetic() && value.IsNumber())
+			success = property.set_value(outVariant, value.GetDouble());
+
 		if (!errorState.check(success, "Type mismatch or unhandled type for JSON key `%s`", property.get_name().to_string().c_str()))
 			return false;
 
