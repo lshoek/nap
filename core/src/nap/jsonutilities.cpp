@@ -55,6 +55,75 @@ namespace nap::utility
 	}
 
 
+	static bool serializePrimitive(const rtti::TypeInfo& type, const rtti::Variant& value, rapidjson::Writer<rapidjson::StringBuffer>& writer, utility::ErrorState& errorState)
+	{
+		// Handle primitive types and string
+		// Verify the property type and json field are equal data types so the property can be assigned
+		if (type.is_arithmetic())
+		{
+			if (type == rtti::TypeInfo::get<bool>())
+				return writer.Bool(value.to_bool());
+
+			if (type == rtti::TypeInfo::get<char>())
+				return writer.String(value.to_string().c_str());
+
+			if (type == rtti::TypeInfo::get<int8_t>())
+				return writer.Int(value.to_int8());
+
+			if (type == rtti::TypeInfo::get<int16_t>())
+				return writer.Int(value.to_int16());
+
+			if (type == rtti::TypeInfo::get<int32_t>())
+				return writer.Int(value.to_int32());
+
+			if (type == rtti::TypeInfo::get<int64_t>())
+				return writer.Int64(value.to_int64());
+
+			if (type == rtti::TypeInfo::get<uint8_t>())
+				return writer.Uint(value.to_uint8());
+
+			if (type == rtti::TypeInfo::get<uint16_t>())
+				return writer.Uint(value.to_uint16());
+
+			if (type == rtti::TypeInfo::get<uint32_t>())
+				return writer.Uint(value.to_uint32());
+
+			if (type == rtti::TypeInfo::get<uint64_t>())
+				return writer.Uint64(value.to_uint64());
+
+			if (type == rtti::TypeInfo::get<float>())
+				return writer.Double(value.to_double());
+
+			if (type == rtti::TypeInfo::get<double>())
+				return writer.Double(value.to_double());
+
+			return false;
+		}
+
+		if (type.is_enumeration())
+		{
+			// Try to convert the enum to string first
+			bool conversion_succeeded = false;
+			auto result = value.to_string(&conversion_succeeded);
+			if (conversion_succeeded)
+				return writer.String(value.to_string().c_str());
+
+			// Failed to convert enum to string; try to write as int
+			conversion_succeeded = false;
+			auto value_int = value.to_uint64(&conversion_succeeded);
+			if (conversion_succeeded)
+				return writer.Uint64(value_int);
+
+			return false;
+		}
+
+		if (type == rtti::TypeInfo::get<std::string>())
+			return writer.String(value.to_string().c_str());
+
+		return false;
+	}
+
+
 	static bool deserializeArray(const rapidjson::GenericArray<true, rapidjson::Value>& array, rtti::Property& prop, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState)
 	{
 		// Create instance
@@ -166,6 +235,101 @@ namespace nap::utility
 
 			if (!deserializePrimitive(json_field, prop, outVariant, errorState))
 				return false;
+		}
+		return true;
+	}
+
+
+	static bool serializeArray(const rtti::Instance object, const rtti::VariantArray& array, rapidjson::Writer<rapidjson::StringBuffer>& writer, rapidjson::StringBuffer& buffer, utility::ErrorState& errorState)
+	{
+		// Write the start of the array
+		if (!errorState.check(writer.StartArray(), "Failed write start of array"))
+			return false;
+
+		// Write the elements
+		for (int i = 0; i < array.get_size(); ++i)
+		{
+			// Start compound
+			if (!errorState.check(writer.StartObject(), "Failed to start nested compound"))
+				return false;
+
+			// Write each value
+			if (!serializeRecursive(array.get_value(i), writer, buffer, errorState))
+				return false;
+
+			// Finish compound
+			if (!errorState.check(writer.EndObject(), "Failed to end nested compound"))
+				return false;
+		}
+
+		// Finish the array
+		if (!errorState.check(writer.EndArray(), "Failed to finish array"))
+			return false;
+
+		return true;
+	}
+
+
+	bool serializeRecursive(const rtti::Instance object, rapidjson::Writer<rapidjson::StringBuffer>& writer, rapidjson::StringBuffer& buffer, utility::ErrorState& errorState)
+	{
+		// Ensure the object is not of a wrapped type
+		if (!errorState.check(!object.get_type().get_raw_type().is_wrapper(), "Wrapped types are not supported"))
+			return false;
+
+		// Write all properties
+		for (const auto& property : object.get_derived_type().get_properties())
+		{
+			// Get the value of the property
+			auto value = property.get_value(object);
+			assert(value.is_valid());
+
+			// Write property name
+			if (!errorState.check(writer.String(property.get_name().data()), "Failed to write property name"))
+				return false;
+
+			// If this is an array, recurse
+			auto value_type = value.get_type();
+			if (value_type.is_array())
+                return serializeArray(value, value.create_array_view(), writer, buffer, errorState);
+
+			if (rtti::isPrimitive(value_type))
+			{
+				// Write primitive type (float, string, etc)
+				if (!serializePrimitive(value_type, value, writer, errorState))
+					return false;
+
+				continue;
+			}
+
+			// Write nested compound
+			if (!value_type.get_properties().empty())
+			{
+				// Start compound
+				if (!errorState.check(writer.StartObject(), "Failed to start nested compound"))
+					return false;
+
+				// Recurse into compound
+				if (!serializeRecursive(value, writer, buffer, errorState))
+					return false;
+
+				// Finish compound
+				if (!errorState.check(writer.EndObject(), "Failed to end nested compound"))
+					return false;
+
+				continue;
+			}
+
+			// Associative containers
+			if (!errorState.check(!value_type.is_associative_container(), "Associative containers are not supported"))
+				return false;
+
+			// Pointers
+			if (!errorState.check(!value_type.is_pointer(), "Pointers are not supported"))
+				return false;
+
+			// Unknown types
+			errorState.fail("Encountered unknown property type");
+			return false;
 		}
 		return true;
 	}
