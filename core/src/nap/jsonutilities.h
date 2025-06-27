@@ -5,15 +5,17 @@
 
 #include <rtti/jsonreader.h>
 #include <rttr/variant.h>
-#include <rapidjson/document.h>
 #include <utility/dllexport.h>
 #include <utility/errorstate.h>
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
+
 
 namespace nap::utility
 {
 	/**
-	 * Deserialize JSON value
-	 * The target object must be rttr registered
+	 * Deserialize JSON value. The target object must be rttr registered.
+	 *
 	 * @tparam T target object type
 	 * @param node json node to deserialize
 	 * @param outVariant target object object to write wrapped in rttr variant
@@ -24,8 +26,8 @@ namespace nap::utility
 	bool NAPAPI deserializeRecursive(const rapidjson::Value& node, rtti::Variant& outVariant, bool lenient, utility::ErrorState& errorState);
 
 	/**
-	 * Generic JSON deserialization. The target object must be rttr registered.
-	 * Below is a simple example of a nested data type.
+	 * Generic JSON deserialization for simple data structures. Only supports primitive types, strings, arrays and
+	 * nested objects. The target object must be rttr registered. Below is a simple example of a nested data type.
 	 *
 	 * ~~~~~{.h}
 	 * 	struct MyPayload
@@ -50,19 +52,19 @@ namespace nap::utility
 	 *	{
 	 *	rttr::registration::class_<nap::MyPayload>("MyPayload")
 	 *		.constructor<>()
-	 *		.property("flag", 		&nap::TrackerResponseData::flag)
-	 *		.property("text", 		&nap::TrackerResponseData::text)
+	 *		.property("flag", 		&nap::MyPayload::flag)
+	 *		.property("text", 		&nap::MyPayload::text)
 	 *
 	 *	rttr::registration::class_<nap::MyStruct>("MyStruct")
 	 *		.constructor<>()
-	 *		.property("name", 		&nap::TrackerResponseRoot::name)
-	 *		.property("data", 		&nap::TrackerResponseRoot::data)
+	 *		.property("name", 		&nap::MyStruct::name)
+	 *		.property("data", 		&nap::MyStruct::data)
 	 *	}
 	 * ~~~~~
 	 *
 	 * @tparam T target object type
 	 * @param json json to deserialize
-	 * @param outObject target object object to write
+	 * @param outObject target object to write
 	 * @param lenient whether missing properties are allowed in the json
 	 * @param errorState the error state if deserialization fails
 	 * @return whether deserialization was successful
@@ -84,6 +86,83 @@ namespace nap::utility
 			return false;
 
 		outObject = variant.get_value<T>();
+		return true;
+	}
+
+
+	/**
+	 * Serialize JSON value. The target object must be rttr registered.
+
+	 * @param object the object to serialize
+	 * @param writer the JSON writer
+	 * @param errorState the error state if serialization fails
+	 * @return whether serialization was successful
+	 */
+	bool NAPAPI serializeRecursive(const rtti::Instance object, rapidjson::Writer<rapidjson::StringBuffer>& writer, rapidjson::StringBuffer& buffer, utility::ErrorState& errorState);
+
+
+	/**
+	 * Generic JSON serialization for simple data structures. Only supports primitive types, strings, arrays and
+	 * nested objects. The target object must be rttr registered. Below is a simple example of a nested data type.
+	 *
+	* ~~~~~{.h}
+	 * 	struct MyPayload
+	 *	{
+	 *		RTTR_ENABLE()
+	 *	public:
+	 *		uint flag = 0;
+	 *		std::string text;
+	 *	};
+	 *
+	 *	struct MyStruct
+	 *	{
+	 *		RTTR_ENABLE()
+	 *	public:
+	 *		std::string name;
+	 *		MyPayload data = 0;
+	 *	};
+	 * ~~~~~
+	 *
+	 * ~~~~~{.cpp}
+	 *	RTTR_REGISTRATION
+	 *	{
+	 *	rttr::registration::class_<nap::MyPayload>("MyPayload")
+	 *		.constructor<>()
+	 *		.property("flag", 		&nap::MyPayload::flag)
+	 *		.property("text", 		&nap::MyPayload::text)
+	 *
+	 *	rttr::registration::class_<nap::MyStruct>("MyStruct")
+	 *		.constructor<>()
+	 *		.property("name", 		&nap::MyStruct::name)
+	 *		.property("data", 		&nap::MyStruct::data)
+	 *	}
+	 * ~~~~~
+	 *
+	 * @tparam T target object type
+	 * @param object the object to serialize
+	 * @param outJSON the JSON serialization result
+	 * @param errorState the error state if serialization fails
+	 * @return whether serialization was successful
+	 */
+	template<typename T>
+	bool NAPAPI serialize(const T& object, std::string& outJSON, utility::ErrorState& errorState)
+	{
+		rapidjson::StringBuffer buffer;
+		rapidjson::Writer writer(buffer);
+
+		// Write start of object
+		if (!errorState.check(writer.StartObject(), "Failed to start writing root object"))
+			return false;
+
+		rtti::Instance obj = object;
+		if (!serializeRecursive(obj, writer, buffer, errorState))
+			return false;
+
+		// Finish object
+		if (!errorState.check(writer.EndObject(), "Failed to finish writing root object"))
+			return false;
+
+		outJSON = buffer.GetString();
 		return true;
 	}
 }
