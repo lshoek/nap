@@ -290,7 +290,12 @@ namespace nap::utility
 			// If this is an array, recurse
 			auto value_type = value.get_type();
 			if (value_type.is_array())
-                return serializeArray(value, value.create_array_view(), writer, buffer, errorState);
+			{
+				if (!serializeArray(value, value.create_array_view(), writer, buffer, errorState))
+					return false;
+
+				continue;
+			}
 
 			if (rtti::isPrimitive(value_type))
 			{
