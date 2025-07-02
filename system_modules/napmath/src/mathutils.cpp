@@ -259,7 +259,7 @@ namespace nap
 		std::string generateUUID()
 		{
 			static std::random_device rd;
-			static std::mt19937 gen(rd());
+			thread_local std::mt19937 gen(rd());
 			static std::uniform_int_distribution<> dis(0, 15);
 			static std::uniform_int_distribution<> dis2(8, 11);
 
