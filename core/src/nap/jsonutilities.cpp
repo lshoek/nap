@@ -224,6 +224,24 @@ namespace nap::utility
 				continue;
 			}
 
+			// Handle enum properties
+            if (prop_type.is_enumeration())
+            {
+                if (!errorState.check(json_field.IsString(), "Enum property `%s` must be a string", prop_name.c_str()))
+                    return false;
+
+                // Get the enum value from the string
+                auto enum_value = prop_type.get_enumeration().name_to_value(json_field.GetString());
+                if (!errorState.check(enum_value.is_valid(), "Enum value `%s` for property `%s` is not valid", json_field.GetString(), prop_name.c_str()))
+                    return false;
+
+                // Set the enum value to the property
+                if (!errorState.check(prop.set_value(instance, enum_value), "Error setting enum value for `%s`", prop_name.c_str()))
+                    return false;
+
+                continue;
+            }
+
 			// Handle array properties
 			if (prop_type.is_array() && json_field.IsArray())
 			{
