@@ -610,14 +610,23 @@ namespace nap
 
 		// Create vulkan runtime instance
 		VkResult res = vkCreateInstance(&inst_info, NULL, &outInstance);
-		if (res == VK_SUCCESS)
-			return true;
-		
-		// Add error message and return
-		errorState.fail(res == VK_ERROR_INCOMPATIBLE_DRIVER ?
-			"Unable to create Vulkan instance, cannot find a compatible Vulkan driver" :
-			"Unable to create Vulkan instance: error: %d", static_cast<int>(res));
-		return false;
+		if (res != VK_SUCCESS)
+		{
+			// Add error message and return
+			if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
+			{
+				errorState.fail("Unable to create Vulkan instance: cannot find a compatible Vulkan driver");
+				return false;
+			}
+			if (res ==	VK_ERROR_LAYER_NOT_PRESENT)
+			{
+				errorState.fail("Unable to create Vulkan instance: missing layer");
+				return false;
+			}
+			errorState.fail("Unable to create Vulkan instance: %d", static_cast<int>(res));
+			return false;
+		}
+		return true;
 	}
 
 
@@ -795,6 +804,34 @@ namespace nap
 		std::vector<VkExtensionProperties> device_properties(device_property_count);
 		if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), NULL, &device_property_count, device_properties.data()) == VK_SUCCESS, "Unable to acquire device extension property names"))
 			return false;
+
+		// Layer extensions
+		for (const auto& layer : layer_names)
+		{
+			uint32 property_count(0);
+			if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), layer, &property_count, NULL) == VK_SUCCESS, "Unable to acquire device extension property count for `%s`", layer))
+				return false;
+
+			std::vector<VkExtensionProperties> properties(property_count);
+			if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), layer, &property_count, properties.data()) == VK_SUCCESS, "Unable to acquire device extension property names for `%s`", layer))
+				return false;
+
+			std::vector<VkExtensionProperties> unique_properties;
+			unique_properties.reserve(property_count);
+			for (const auto& prop : properties)
+			{
+				// Check if the property is unique
+				auto it = std::find_if(device_properties.begin(), device_properties.end(), [prop=prop](const auto& device_property) {
+					return std::strncmp(&prop.extensionName[0], &device_property.extensionName[0], VK_MAX_EXTENSION_NAME_SIZE) == 0;
+				});
+				if (it == device_properties.end())
+					unique_properties.emplace_back(prop);
+			}
+
+			// Add to list of device properties
+			device_properties.reserve(device_properties.size() + unique_properties.size());
+			device_properties.insert(device_properties.end(), unique_properties.begin(), unique_properties.end());
+		}
 
 		// Match names against requested extension
 		std::vector<const char*> device_property_names;
