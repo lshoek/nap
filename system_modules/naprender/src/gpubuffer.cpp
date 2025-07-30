@@ -283,6 +283,21 @@ namespace nap
 			errorState.fail("Unable to create render buffer");
 			return false;
 		}
+
+		// Label the object for debugging
+		// TODO: Should check if debug_utils is enabled
+#ifndef NDEBUG
+		auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(mRenderService->getVulkanInstance(), "vkSetDebugUtilsObjectNameEXT");
+		if (func != VK_NULL_HANDLE)
+		{
+			VkDebugUtilsObjectNameInfoEXT util = {};
+			util.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+			util.objectType = VK_OBJECT_TYPE_BUFFER;
+			util.objectHandle = (uint64_t)mRenderBuffers[0].mBuffer;
+			util.pObjectName = mID.c_str();
+			func(mRenderService->getDevice(), &util);
+		}
+#endif
 		return true;
 	}
 
@@ -390,6 +405,21 @@ namespace nap
 				errorState.fail("Render buffer error");
 				return false;
 			}
+
+			// Label the object for debugging
+			// TODO: Should check if debug_utils is enabled
+#ifndef NDEBUG
+			auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(mRenderService->getVulkanInstance(), "vkSetDebugUtilsObjectNameEXT");
+			if (func != VK_NULL_HANDLE)
+			{
+				VkDebugUtilsObjectNameInfoEXT util = {};
+				util.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+				util.objectType = VK_OBJECT_TYPE_BUFFER;
+				util.objectHandle = (uint64_t)buffer_data.mBuffer;
+				util.pObjectName = utility::stringFormat("%s (%u)", mID.c_str(), mCurrentRenderBufferIndex).c_str();
+				func(mRenderService->getDevice(), &util);
+			}
+#endif
 		}
 
 		// Cache buffer size
