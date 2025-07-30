@@ -539,7 +539,7 @@ namespace nap
 			if (found_it != unique_requested_extensions.end())
 			{
 				const auto& name = outExtensions.emplace_back(prop.extensionName);
-				if (print) { Logger::info("Applying instance extension: %s", name.c_str()); }
+				Logger::info("Applying instance extension: %s", name.c_str());
 			}
 		}
 
