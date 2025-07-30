@@ -95,20 +95,21 @@ RTTI_BEGIN_ENUM(nap::RenderServiceConfiguration::EPhysicalDeviceType)
 RTTI_END_ENUM
 
 RTTI_BEGIN_CLASS(nap::RenderServiceConfiguration, "Render service configuration")
-	RTTI_PROPERTY("Headless",					&nap::RenderServiceConfiguration::mHeadless,					nap::rtti::EPropertyMetaData::Default, "Render without a window, turning this on `forbids` the use of a nap::RenderWindow")
-	RTTI_PROPERTY("PreferredGPU",				&nap::RenderServiceConfiguration::mPreferredGPU,				nap::rtti::EPropertyMetaData::Default, "The preferred GPU type, when unavailable the fastest option is selected")
-	RTTI_PROPERTY("Layers",						&nap::RenderServiceConfiguration::mLayers,						nap::rtti::EPropertyMetaData::Default, "Vulkan layers the engine tries to load in Debug mode, layers are disabled in release mode.")
-	RTTI_PROPERTY("Extensions",					&nap::RenderServiceConfiguration::mAdditionalExtensions,		nap::rtti::EPropertyMetaData::Default, "Additional required Vulkan device extensions")
-	RTTI_PROPERTY("VulkanMajor",				&nap::RenderServiceConfiguration::mVulkanVersionMajor,			nap::rtti::EPropertyMetaData::Default, "The major required vulkan API instance version")
-	RTTI_PROPERTY("VulkanMinor",				&nap::RenderServiceConfiguration::mVulkanVersionMinor,			nap::rtti::EPropertyMetaData::Default, "The minor required vulkan API instance version")
-	RTTI_PROPERTY("AnisotropicSamples",			&nap::RenderServiceConfiguration::mAnisotropicFilterSamples,	nap::rtti::EPropertyMetaData::Default, "Default max number of anisotropic filter samples, can be overridden by a sampler if required")
-	RTTI_PROPERTY("EnableHighDPI",				&nap::RenderServiceConfiguration::mEnableHighDPIMode,			nap::rtti::EPropertyMetaData::Default, "Enable high DPI scaling and rendering")
-	RTTI_PROPERTY("EnableCompute",				&nap::RenderServiceConfiguration::mEnableCompute,				nap::rtti::EPropertyMetaData::Default, "Ensures Vulkan compute is supported")
-	RTTI_PROPERTY("EnableCaching",				&nap::RenderServiceConfiguration::mEnableCaching,				nap::rtti::EPropertyMetaData::Default, "Saves state between sessions, including window size & position")
-	RTTI_PROPERTY("EnableDebug",				&nap::RenderServiceConfiguration::mEnableDebug,					nap::rtti::EPropertyMetaData::Default, "Load debug extension for printing Vulkan debug messages")
-	RTTI_PROPERTY("EnableRobustBufferAccess",	&nap::RenderServiceConfiguration::mEnableRobustBufferAccess,	nap::rtti::EPropertyMetaData::Default, "Enables buffer bounds-checking on the GPU, only necessary for debugging purposes")
-	RTTI_PROPERTY("ShowLayers",					&nap::RenderServiceConfiguration::mPrintAvailableLayers,		nap::rtti::EPropertyMetaData::Default, "Print all available Vulkan layers to console")
-	RTTI_PROPERTY("ShowExtensions",				&nap::RenderServiceConfiguration::mPrintAvailableExtensions,	nap::rtti::EPropertyMetaData::Default, "Print all available Vulkan extensions to console")
+	RTTI_PROPERTY("Headless",					&nap::RenderServiceConfiguration::mHeadless,						nap::rtti::EPropertyMetaData::Default, "Render without a window, turning this on `forbids` the use of a nap::RenderWindow")
+	RTTI_PROPERTY("PreferredGPU",				&nap::RenderServiceConfiguration::mPreferredGPU,					nap::rtti::EPropertyMetaData::Default, "The preferred GPU type, when unavailable the fastest option is selected")
+	RTTI_PROPERTY("Layers",						&nap::RenderServiceConfiguration::mLayers,							nap::rtti::EPropertyMetaData::Default, "Vulkan layers the engine tries to load in Debug mode, layers are disabled in release mode.")
+	RTTI_PROPERTY("InstanceExtensions",			&nap::RenderServiceConfiguration::mAdditionalInstanceExtensions,	nap::rtti::EPropertyMetaData::Default, "Additional required Vulkan instance extensions")
+	RTTI_PROPERTY("DeviceExtensions",			&nap::RenderServiceConfiguration::mAdditionalDeviceExtensions,		nap::rtti::EPropertyMetaData::Default, "Additional required Vulkan device extensions")
+	RTTI_PROPERTY("VulkanMajor",				&nap::RenderServiceConfiguration::mVulkanVersionMajor,				nap::rtti::EPropertyMetaData::Default, "The major required vulkan API instance version")
+	RTTI_PROPERTY("VulkanMinor",				&nap::RenderServiceConfiguration::mVulkanVersionMinor,				nap::rtti::EPropertyMetaData::Default, "The minor required vulkan API instance version")
+	RTTI_PROPERTY("AnisotropicSamples",			&nap::RenderServiceConfiguration::mAnisotropicFilterSamples,		nap::rtti::EPropertyMetaData::Default, "Default max number of anisotropic filter samples, can be overridden by a sampler if required")
+	RTTI_PROPERTY("EnableHighDPI",				&nap::RenderServiceConfiguration::mEnableHighDPIMode,				nap::rtti::EPropertyMetaData::Default, "Enable high DPI scaling and rendering")
+	RTTI_PROPERTY("EnableCompute",				&nap::RenderServiceConfiguration::mEnableCompute,					nap::rtti::EPropertyMetaData::Default, "Ensures Vulkan compute is supported")
+	RTTI_PROPERTY("EnableCaching",				&nap::RenderServiceConfiguration::mEnableCaching,					nap::rtti::EPropertyMetaData::Default, "Saves state between sessions, including window size & position")
+	RTTI_PROPERTY("EnableDebug",				&nap::RenderServiceConfiguration::mEnableDebug,						nap::rtti::EPropertyMetaData::Default, "Load debug extension for printing Vulkan debug messages")
+	RTTI_PROPERTY("EnableRobustBufferAccess",	&nap::RenderServiceConfiguration::mEnableRobustBufferAccess,		nap::rtti::EPropertyMetaData::Default, "Enables buffer bounds-checking on the GPU, only necessary for debugging purposes")
+	RTTI_PROPERTY("ShowLayers",					&nap::RenderServiceConfiguration::mPrintAvailableLayers,			nap::rtti::EPropertyMetaData::Default, "Print all available Vulkan layers to console")
+	RTTI_PROPERTY("ShowExtensions",				&nap::RenderServiceConfiguration::mPrintAvailableExtensions,		nap::rtti::EPropertyMetaData::Default, "Print all available Vulkan extensions to console")
 RTTI_END_CLASS
 
 RTTI_BEGIN_CLASS_NO_DEFAULT_CONSTRUCTOR(nap::RenderService, "Main interface for GPU Render (2D/3D) and Compute operations")
@@ -470,6 +471,87 @@ namespace nap
 
 
 	/**
+	 * Returns all available instance extensions
+	 */
+	static bool getAvailableInstanceExtensions(const std::vector<std::string>& requestedExtensions, const std::vector<std::string>& layers, bool print, std::vector<std::string>& outExtensions, utility::ErrorState& errorState)
+	{
+		std::unordered_set<std::string> unique_requested_extensions;
+		for (const auto& ext : requestedExtensions)
+			unique_requested_extensions.emplace(ext);
+
+		// Get the number of available extensions for our graphics card
+		uint32 count(0);
+		if (!errorState.check(vkEnumerateInstanceExtensionProperties(NULL, &count, NULL) == VK_SUCCESS, "Unable to query vulkan instance layer property count"))
+			return false;
+
+		// Acquire their actual names
+		std::vector<VkExtensionProperties> instance_properties(count);
+		if (!errorState.check(vkEnumerateInstanceExtensionProperties(NULL, &count, instance_properties.data()) == VK_SUCCESS, "Unable to retrieve vulkan instance layer names"))
+			return false;
+
+		// Instance extensions per layer
+		for (const auto& layer : layers)
+		{
+			uint32 property_count(0);
+			if (!errorState.check(vkEnumerateInstanceExtensionProperties(layer.c_str(), &property_count, NULL) == VK_SUCCESS, "Unable to acquire instance extension property count for `%s`", layer))
+				return false;
+
+			std::vector<VkExtensionProperties> properties(property_count);
+			if (!errorState.check(vkEnumerateInstanceExtensionProperties(layer.c_str(), &property_count, properties.data()) == VK_SUCCESS, "Unable to acquire instance extension property names for `%s`", layer))
+				return false;
+
+			std::vector<VkExtensionProperties> unique_properties;
+			unique_properties.reserve(property_count);
+			for (const auto& prop : properties)
+			{
+				// Check if the property is unique
+				auto it = std::find_if(instance_properties.begin(), instance_properties.end(), [prop=prop](const auto& device_property) {
+					return std::strncmp(&prop.extensionName[0], &device_property.extensionName[0], VK_MAX_EXTENSION_NAME_SIZE) == 0;
+				});
+				if (it == instance_properties.end())
+					unique_properties.emplace_back(prop);
+			}
+
+			// Add to list of instance properties
+			instance_properties.reserve(instance_properties.size() + unique_properties.size());
+			instance_properties.insert(instance_properties.end(), unique_properties.begin(), unique_properties.end());
+		}
+
+		// Print all available instance extensions
+		if (print)
+		{
+			Logger::info("Found %d instance extensions:", count);
+			for (int index = 0; index < instance_properties.size(); ++index)
+			{
+				const VkExtensionProperties& prop = instance_properties[index];
+				Logger::info("%d: %s", index, std::string(prop.extensionName).c_str());
+			}
+		}
+
+		// Match names against requested extension
+		outExtensions.clear();
+		for (int index = 0; index < instance_properties.size(); ++index)
+		{
+			const VkExtensionProperties& prop = instance_properties[index];
+			const auto found_it = std::find_if(unique_requested_extensions.begin(), unique_requested_extensions.end(), [&](const auto& it) {
+				return it == std::string(prop.extensionName);
+			});
+			if (found_it != unique_requested_extensions.end())
+			{
+				const auto& name = outExtensions.emplace_back(prop.extensionName);
+				if (print) { Logger::info("Applying instance extension: %s", name.c_str()); }
+			}
+		}
+
+		// Make sure we found all required extensions
+		if (!errorState.check(unique_requested_extensions.size() == outExtensions.size(), "Unable to find all required instance extensions"))
+			return false;
+
+		return true;
+	}
+
+
+	/**
 	 * Returns debug instance extension
 	 */
 	static bool getDebugInstanceExtensions(bool& debugUtilsExtensionFound, std::vector<std::string>& outExtensions, utility::ErrorState& errorState)
@@ -503,7 +585,7 @@ namespace nap
 				return true;
 			}
 		}
-		errorState.fail("No available debug messenging extension found!");
+		errorState.fail("No available debug messaging extension found!");
 		return false;
 	}
 
@@ -550,7 +632,7 @@ namespace nap
 		for (const auto& layer : layerNames)
 			layer_names.emplace_back(layer.c_str());
 
-		// Copy extensions
+		// Copy instance extensions
 		std::vector<const char*> ext_names;
 		ext_names.reserve(extensionNames.size());
 		for (const auto& ext : extensionNames)
@@ -845,8 +927,8 @@ namespace nap
 				device_property_names.emplace_back(ext_property.extensionName);
 		}
 
-		// Make sure we found all required extensions
-		if (!errorState.check(extensionNames.size() == device_property_names.size(), "Unable to find all required extensions"))
+		// Make sure we found all required device extensions
+		if (!errorState.check(extensionNames.size() == device_property_names.size(), "Unable to find all required device extensions"))
 			return false;
 
 		// Log the extensions we can use
@@ -1764,7 +1846,7 @@ namespace nap
 			Logger::info("Applying layer: %s", layer.c_str());
 #endif // NDEBUG
 
-		// Create Vulkan Instance together with required extensions and layers
+		// Create Vulkan Instance together with required instance extensions and layers
 		mAPIVersion = VK_MAKE_API_VERSION(0, 1, 2, 0);
 		if (!createVulkanInstance(found_layers, required_instance_extensions, mAPIVersion, mInstance, error))
 			return false;
@@ -1859,7 +1941,7 @@ namespace nap
 		// Returns, next to the default VK_KHR_surface, a platform specific extension.
 		// These extensions have to be enabled in order to create a swapchain and a handle to a presentable surface.
 		// When running headless we don't present so don't need the extensions.
-		std::vector<std::string> instance_extensions;
+		std::vector<std::string> required_instance_extension_names;
 		if (!mHeadless)
 		{
 			// Create dummy window and verify creation
@@ -1872,7 +1954,7 @@ namespace nap
 			
 			// Get all available vulkan instance extensions, required to create a presentable surface.
 			// It also provides a way to determine whether a queue family in a physical device supports presenting to particular surface.
-			if (!getSurfaceInstanceExtensions(dummy_window.mWindow, instance_extensions, errorState))
+			if (!getSurfaceInstanceExtensions(dummy_window.mWindow, required_instance_extension_names, errorState))
 				return false;
 		}
 
@@ -1881,7 +1963,7 @@ namespace nap
 		const bool is_debug_enabled = render_config->mEnableDebug;
 		if (is_debug_enabled)
 		{
-			if (!errorState.check(getDebugInstanceExtensions(is_debug_utils_found, instance_extensions, errorState), "Failed to find available debug extension while debug is enabled"))
+			if (!errorState.check(getDebugInstanceExtensions(is_debug_utils_found, required_instance_extension_names, errorState), "Failed to find available debug extension while debug is enabled"))
 				return false;
 		}
 
@@ -1903,9 +1985,19 @@ namespace nap
 			Logger::info("Applying layer: %s", layer.c_str());
 #endif // NDEBUG
 
-		// Create Vulkan Instance together with required extensions and layers
+		// Add additional requests
+		for (const auto& ext : render_config->mAdditionalInstanceExtensions)
+			required_instance_extension_names.emplace_back(ext);
+
+		// Get all available vulkan instance extensions
+		bool print_extensions = render_config->mPrintAvailableExtensions;
+		std::vector<std::string> found_instance_extensions;
+		if (!getAvailableInstanceExtensions(required_instance_extension_names, found_layers, print_extensions, found_instance_extensions, errorState))
+			return false;
+
+		// Create Vulkan Instance together with required instance extensions and layers
 		mAPIVersion = VK_MAKE_API_VERSION(0, render_config->mVulkanVersionMajor, render_config->mVulkanVersionMinor, 0);
-		if (!createVulkanInstance(found_layers, instance_extensions, mAPIVersion, mInstance, errorState))
+		if (!createVulkanInstance(found_layers, found_instance_extensions, mAPIVersion, mInstance, errorState))
 			return false;
 
 		// Set Vulkan messaging callback based on the available debug messaging extension
@@ -1953,21 +2045,20 @@ namespace nap
 		nap::Logger::info("Non solid fill mode: %s", mNonSolidFillModeSupported ? "Supported" : "Not Supported");
 
 		// Get extensions that are required for NAP render engine to function.
-		std::vector<std::string> required_ext_names = getRequiredDeviceExtensionNames(mAPIVersion);
+		std::vector<std::string> required_dev_ext_names = getRequiredDeviceExtensionNames(mAPIVersion);
 
 		// Add swapchain when not running headless. Adds the ability to present rendered results to a surface.
-		if (!mHeadless) { required_ext_names.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); };
+		if (!mHeadless) { required_dev_ext_names.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); };
 
 		// Add additional requests
-		required_ext_names.insert(required_ext_names.end(), render_config->mAdditionalExtensions.begin(), render_config->mAdditionalExtensions.end());
+		required_dev_ext_names.insert(required_dev_ext_names.end(), render_config->mAdditionalDeviceExtensions.begin(), render_config->mAdditionalDeviceExtensions.end());
 
 		// Create unique set
-		std::unordered_set<std::string> unique_ext_names(required_ext_names.size());
-		for (const auto& ext : required_ext_names)
+		std::unordered_set<std::string> unique_ext_names(required_dev_ext_names.size());
+		for (const auto& ext : required_dev_ext_names)
 			unique_ext_names.emplace(ext);
 
 		// Create a logical device that interfaces with the physical device.
-		bool print_extensions = render_config->mPrintAvailableExtensions;
 		bool robust_buffer_access = render_config->mEnableRobustBufferAccess;
 		if (!createLogicalDevice(mPhysicalDevice, found_layers, unique_ext_names, print_extensions, robust_buffer_access, mDevice, errorState))
 			return false;
