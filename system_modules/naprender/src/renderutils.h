@@ -84,5 +84,13 @@ namespace nap
 		 * Uploads data into a staging buffer
 		 */
 		bool NAPAPI uploadToBuffer(VmaAllocator allocator, uint32 size, const void* data, BufferData& buffer);
+
+#ifndef NDEBUG
+		/**
+		 * Label a Vulkan object for debugging purposes. Requires instance extension VK_EXT_debug_utils.
+		 * TODO: Should check if debug_utils is enabled
+		 */
+		bool NAPAPI labelObjectDebug(const std::string& label, uint64_t handle, VkObjectType type, VkInstance instance, VkDevice device);
+#endif
 	}
 }

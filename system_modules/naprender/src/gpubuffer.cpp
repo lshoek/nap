@@ -284,19 +284,8 @@ namespace nap
 			return false;
 		}
 
-		// Label the object for debugging
-		// TODO: Should check if debug_utils is enabled
 #ifndef NDEBUG
-		auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(mRenderService->getVulkanInstance(), "vkSetDebugUtilsObjectNameEXT");
-		if (func != VK_NULL_HANDLE)
-		{
-			VkDebugUtilsObjectNameInfoEXT util = {};
-			util.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-			util.objectType = VK_OBJECT_TYPE_BUFFER;
-			util.objectHandle = (uint64_t)mRenderBuffers[0].mBuffer;
-			util.pObjectName = mID.c_str();
-			func(mRenderService->getDevice(), &util);
-		}
+		utility::labelObjectDebug(mID, reinterpret_cast<uint64_t>(mRenderBuffers[0].mBuffer), VK_OBJECT_TYPE_BUFFER, mRenderService->getVulkanInstance(), mRenderService->getDevice());
 #endif
 		return true;
 	}
@@ -389,9 +378,9 @@ namespace nap
 			if (buffer_data.mBuffer != VK_NULL_HANDLE)
 			{
 				mRenderService->queueVulkanObjectDestructor([buffer = buffer_data](RenderService& renderService) mutable
-					{
-						utility::destroyBuffer(renderService.getVulkanAllocator(), buffer);
-					});
+				{
+					utility::destroyBuffer(renderService.getVulkanAllocator(), buffer);
+				});
 			}
 
 			// Sustain memory type related usage information when creating a dynamic staging buffer
@@ -406,22 +395,11 @@ namespace nap
 				return false;
 			}
 
-			// Label the object for debugging
-			// TODO: Should check if debug_utils is enabled
 #ifndef NDEBUG
-			auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(mRenderService->getVulkanInstance(), "vkSetDebugUtilsObjectNameEXT");
-			if (func != VK_NULL_HANDLE)
-			{
-				VkDebugUtilsObjectNameInfoEXT util = {};
-				util.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-				util.objectType = VK_OBJECT_TYPE_BUFFER;
-				util.objectHandle = (uint64_t)buffer_data.mBuffer;
-				util.pObjectName = utility::stringFormat("%s (%u)", mID.c_str(), mCurrentRenderBufferIndex).c_str();
-				func(mRenderService->getDevice(), &util);
-			}
+			const auto label = utility::stringFormat("%s (%d)", mID.c_str(), mCurrentRenderBufferIndex);
+			utility::labelObjectDebug(label, reinterpret_cast<uint64_t>(buffer_data.mBuffer), VK_OBJECT_TYPE_BUFFER, mRenderService->getVulkanInstance(), mRenderService->getDevice());
 #endif
 		}
-
 		// Cache buffer size
 		mSize = size;
 

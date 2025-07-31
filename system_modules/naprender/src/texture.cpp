@@ -220,6 +220,12 @@ namespace nap
 		if (!create2DImageView(mRenderService.getDevice(), mImageData.getImage(), mFormat, mMipLevels, aspect, mImageData.mView, errorState))
 			return false;
 
+#ifndef NDEBUG
+		const auto view_label = utility::stringFormat("%s_view", mID.c_str());
+		utility::labelObjectDebug(mID, reinterpret_cast<uint64_t>(mImageData.mImage), VK_OBJECT_TYPE_IMAGE, mRenderService.getVulkanInstance(), mRenderService.getDevice());
+		utility::labelObjectDebug(view_label, reinterpret_cast<uint64_t>(mImageData.mView), VK_OBJECT_TYPE_IMAGE_VIEW, mRenderService.getVulkanInstance(), mRenderService.getDevice());
+#endif
+
 		// Initialize buffer indexing
 		mCurrentStagingBufferIndex = 0;
 		mDescriptor = descriptor;

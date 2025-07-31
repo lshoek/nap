@@ -344,5 +344,28 @@ namespace nap
 			vmaUnmapMemory(allocator, buffer.mAllocation);
 			return true;
 		}
+
+#ifndef NDEBUG
+		bool labelObjectDebug(const std::string& label, uint64_t handle, VkObjectType type, VkInstance instance, VkDevice device)
+		{
+        	assert(instance != VK_NULL_HANDLE);
+        	assert(device != VK_NULL_HANDLE);
+
+        	if (label.empty())
+        		return false;
+
+        	auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(instance, "vkSetDebugUtilsObjectNameEXT");
+        	if (func == VK_NULL_HANDLE)
+        		return false;
+
+        	VkDebugUtilsObjectNameInfoEXT util = {};
+        	util.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        	util.objectType = type;
+        	util.objectHandle = handle;
+        	util.pObjectName = label.c_str();
+        	return func(device, &util) == VK_SUCCESS;
+		}
+#endif
+
 	}
 }
