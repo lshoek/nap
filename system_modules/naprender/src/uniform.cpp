@@ -42,6 +42,10 @@ RTTI_BEGIN_CLASS(nap::UniformFloat)
 	RTTI_PROPERTY(nap::uniform::value, &nap::UniformFloat::mValue, nap::rtti::EPropertyMetaData::Required, "Float input value")
 RTTI_END_CLASS
 
+RTTI_BEGIN_CLASS(nap::UniformDouble)
+	RTTI_PROPERTY(nap::uniform::value, &nap::UniformDouble::mValue, nap::rtti::EPropertyMetaData::Required, "Double input value")
+RTTI_END_CLASS
+
 RTTI_BEGIN_CLASS(nap::UniformVec2)
 	RTTI_PROPERTY(nap::uniform::value, &nap::UniformVec2::mValue, nap::rtti::EPropertyMetaData::Required, "Vector (vec2) input value")
 RTTI_END_CLASS
@@ -68,6 +72,10 @@ RTTI_END_CLASS
 
 RTTI_BEGIN_CLASS(nap::UniformFloatArray)
 	RTTI_PROPERTY(nap::uniform::values, &nap::UniformFloatArray::mValues, nap::rtti::EPropertyMetaData::Required, "Float array input value")
+RTTI_END_CLASS
+
+RTTI_BEGIN_CLASS(nap::UniformDoubleArray)
+	RTTI_PROPERTY(nap::uniform::values, &nap::UniformDoubleArray::mValues, nap::rtti::EPropertyMetaData::Required, "Double array input value")
 RTTI_END_CLASS
 
 RTTI_BEGIN_CLASS(nap::UniformVec2Array)

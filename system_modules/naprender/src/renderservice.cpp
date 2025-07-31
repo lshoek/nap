@@ -8,7 +8,6 @@
 #include "rendercomponent.h"
 #include "computecomponent.h"
 #include "renderwindow.h"
-#include "transformcomponent.h"
 #include "cameracomponent.h"
 #include "renderglobals.h"
 #include "mesh.h"

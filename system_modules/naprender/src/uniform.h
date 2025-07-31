@@ -213,6 +213,7 @@ namespace nap
 	using UniformUInt						= TypedUniformValue<uint>;
 	using UniformInt						= TypedUniformValue<int>;
 	using UniformFloat						= TypedUniformValue<float>;
+	using UniformDouble						= TypedUniformValue<double>;
 	using UniformVec2						= TypedUniformValue<glm::vec2>;
 	using UniformVec3						= TypedUniformValue<glm::vec3>;
 	using UniformVec4						= TypedUniformValue<glm::vec4>;
@@ -228,6 +229,7 @@ namespace nap
 	using UniformUIntArray					= TypedUniformValueArray<uint>;
 	using UniformIntArray					= TypedUniformValueArray<int>;
 	using UniformFloatArray					= TypedUniformValueArray<float>;
+	using UniformDoubleArray				= TypedUniformValueArray<double>;
 	using UniformVec2Array					= TypedUniformValueArray<glm::vec2>;
 	using UniformVec3Array					= TypedUniformValueArray<glm::vec3>;
 	using UniformVec4Array					= TypedUniformValueArray<glm::vec4>;

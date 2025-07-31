@@ -387,6 +387,7 @@ namespace nap
 	using UniformUIntInstance	= TypedUniformValueInstance<uint>;
 	using UniformIntInstance	= TypedUniformValueInstance<int>;
 	using UniformFloatInstance	= TypedUniformValueInstance<float>;
+	using UniformDoubleInstance	= TypedUniformValueInstance<double>;
 	using UniformVec2Instance	= TypedUniformValueInstance<glm::vec2>;
 	using UniformVec3Instance	= TypedUniformValueInstance<glm::vec3>;
 	using UniformVec4Instance	= TypedUniformValueInstance<glm::vec4>;
@@ -402,6 +403,7 @@ namespace nap
 	using UniformUIntArrayInstance	= TypedUniformValueArrayInstance<uint>;
 	using UniformIntArrayInstance	= TypedUniformValueArrayInstance<int>;
 	using UniformFloatArrayInstance = TypedUniformValueArrayInstance<float>;
+	using UniformDoubleArrayInstance = TypedUniformValueArrayInstance<double>;
 	using UniformVec2ArrayInstance	= TypedUniformValueArrayInstance<glm::vec2>;
 	using UniformVec3ArrayInstance	= TypedUniformValueArrayInstance<glm::vec3>;
 	using UniformVec4ArrayInstance	= TypedUniformValueArrayInstance<glm::vec4>;

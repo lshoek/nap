@@ -39,6 +39,7 @@ namespace nap
 	{
 		Unknown = 0,		///< unknown or invalid shader uniform
 		Float,				///< float
+		Double,				///< double
 		Int,				///< int
 		UInt,				///< unsigned int
 		Vec2,				///< 2 float vector
