@@ -475,79 +475,138 @@ namespace nap
 	 */
 	static bool getAvailableInstanceExtensions(const std::vector<std::string>& requestedExtensions, const std::vector<std::string>& layers, bool print, std::vector<std::string>& outExtensions, utility::ErrorState& errorState)
 	{
-		std::unordered_set<std::string> unique_requested_extensions;
-		for (const auto& ext : requestedExtensions)
-			unique_requested_extensions.emplace(ext);
-
 		// Get the number of available extensions for our graphics card
 		uint32 count(0);
-		if (!errorState.check(vkEnumerateInstanceExtensionProperties(NULL, &count, NULL) == VK_SUCCESS, "Unable to query vulkan instance layer property count"))
+		if (!errorState.check(vkEnumerateInstanceExtensionProperties(NULL, &count, NULL) == VK_SUCCESS, "Unable to query instance extension count"))
 			return false;
 
 		// Acquire their actual names
-		std::vector<VkExtensionProperties> instance_properties(count);
-		if (!errorState.check(vkEnumerateInstanceExtensionProperties(NULL, &count, instance_properties.data()) == VK_SUCCESS, "Unable to retrieve vulkan instance layer names"))
+		std::vector<VkExtensionProperties> available_extensions(count);
+		if (!errorState.check(vkEnumerateInstanceExtensionProperties(NULL, &count, available_extensions.data()) == VK_SUCCESS, "Unable to retrieve instance extension names"))
 			return false;
 
-		// Instance extensions per layer
+		// Copy extension names to a set
+		std::set<std::string> unique_extensions;
+		std::transform(available_extensions.begin(), available_extensions.end(),
+			std::inserter(unique_extensions, unique_extensions.begin()), [](const auto& ext) { return std::string(ext.extensionName); });
+
+		// Get layer-specific instance extensions
 		for (const auto& layer : layers)
 		{
-			uint32 property_count(0);
-			if (!errorState.check(vkEnumerateInstanceExtensionProperties(layer.c_str(), &property_count, NULL) == VK_SUCCESS, "Unable to acquire instance extension property count for `%s`", layer))
+			uint32 layer_extension_count(0);
+			if (!errorState.check(vkEnumerateInstanceExtensionProperties(layer.c_str(), &layer_extension_count, NULL) == VK_SUCCESS, "Unable to acquire instance extension count for layer `%s`", layer))
 				return false;
 
-			std::vector<VkExtensionProperties> properties(property_count);
-			if (!errorState.check(vkEnumerateInstanceExtensionProperties(layer.c_str(), &property_count, properties.data()) == VK_SUCCESS, "Unable to acquire instance extension property names for `%s`", layer))
+			std::vector<VkExtensionProperties> layer_extensions(layer_extension_count);
+			if (!errorState.check(vkEnumerateInstanceExtensionProperties(layer.c_str(), &layer_extension_count, layer_extensions.data()) == VK_SUCCESS, "Unable to acquire instance extension names for layer `%s`", layer))
 				return false;
 
-			std::vector<VkExtensionProperties> unique_properties;
-			unique_properties.reserve(property_count);
-			for (const auto& prop : properties)
-			{
-				// Check if the property is unique
-				auto it = std::find_if(instance_properties.begin(), instance_properties.end(), [prop=prop](const auto& device_property) {
-					return std::strncmp(&prop.extensionName[0], &device_property.extensionName[0], VK_MAX_EXTENSION_NAME_SIZE) == 0;
-				});
-				if (it == instance_properties.end())
-					unique_properties.emplace_back(prop);
-			}
-
-			// Add to list of instance properties
-			instance_properties.reserve(instance_properties.size() + unique_properties.size());
-			instance_properties.insert(instance_properties.end(), unique_properties.begin(), unique_properties.end());
+			// Insert layer extensions in set
+			std::transform(layer_extensions.begin(), layer_extensions.end(),
+				std::inserter(unique_extensions, unique_extensions.begin()), [](const auto& ext) { return std::string(ext.extensionName); });
 		}
 
 		// Print all available instance extensions
 		if (print)
 		{
 			Logger::info("Found %d instance extensions:", count);
-			for (int index = 0; index < instance_properties.size(); ++index)
+			uint index = 0;
+			for (const auto& unique_extension : unique_extensions)
 			{
-				const VkExtensionProperties& prop = instance_properties[index];
-				Logger::info("%d: %s", index, std::string(prop.extensionName).c_str());
+				Logger::info("%d: %s", index, std::string(unique_extension).c_str());
+				++index;
 			}
 		}
 
 		// Match names against requested extension
 		outExtensions.clear();
-		for (int index = 0; index < instance_properties.size(); ++index)
+		bool all_extensions_found = true;
+		for (const auto& requested_extension : requestedExtensions)
 		{
-			const VkExtensionProperties& prop = instance_properties[index];
-			const auto found_it = std::find_if(unique_requested_extensions.begin(), unique_requested_extensions.end(), [&](const auto& it) {
-				return it == std::string(prop.extensionName);
-			});
-			if (found_it != unique_requested_extensions.end())
+			const auto it = unique_extensions.find(requested_extension);
+			if (it == unique_extensions.end())
 			{
-				const auto& name = outExtensions.emplace_back(prop.extensionName);
-				Logger::info("Applying instance extension: %s", name.c_str());
+				Logger::warn("Missing instance extension: %s", requested_extension.c_str());
+				all_extensions_found = false;
+				continue;
 			}
+			outExtensions.emplace_back(*it);
+			Logger::info("Applying instance extension: %s", it->c_str());
 		}
 
 		// Make sure we found all required extensions
-		if (!errorState.check(unique_requested_extensions.size() == outExtensions.size(), "Unable to find all required instance extensions"))
+		if (!errorState.check(all_extensions_found, "Unable to find all required instance extensions"))
 			return false;
 
 		return true;
+	}
+
+
+	static bool getAvailableDeviceExtensions(const PhysicalDevice& physicalDevice, const std::unordered_set<std::string>& requestedExtensions, const std::vector<std::string>& layers, bool print, std::vector<std::string>& outExtensions, utility::ErrorState& errorState)
+	{
+		// Get the number of available device extensions
+	    uint32 count = 0;
+	    if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), nullptr, &count, nullptr) == VK_SUCCESS, "Unable to query device extension count"))
+	        return false;
+
+	    std::vector<VkExtensionProperties> available_extensions(count);
+	    if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), nullptr, &count, available_extensions.data()) == VK_SUCCESS, "Unable to retrieve device extension names"))
+	        return false;
+
+		// Copy extension names to a set
+		std::unordered_set<std::string> unique_extensions;
+		std::transform(available_extensions.begin(), available_extensions.end(),
+			std::inserter(unique_extensions, unique_extensions.begin()), [](const auto& ext) { return std::string(ext.extensionName); });
+
+		// Get layer-specific device extensions
+	    for (const auto& layer : layers)
+	    {
+	        uint32 layer_extension_count = 0;
+	        if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), layer.c_str(), &layer_extension_count, nullptr) == VK_SUCCESS, "Unable to acquire device extension count for layer '%s'", layer.c_str()))
+	            return false;
+
+	        std::vector<VkExtensionProperties> layer_extensions(layer_extension_count);
+	        if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(),layer.c_str(), &layer_extension_count, layer_extensions.data()) == VK_SUCCESS, "Unable to acquire device extension names for layer '%s'", layer.c_str()))
+	            return false;
+
+	    	// Insert layer extensions in set
+	    	std::transform(layer_extensions.begin(), layer_extensions.end(),
+				std::inserter(unique_extensions, unique_extensions.begin()), [](const auto& ext) { return std::string(ext.extensionName); });
+	    }
+
+		// Print all available device extensions
+		if (print)
+		{
+			Logger::info("Found %d device extensions:", count);
+			uint index = 0;
+			for (const auto& unique_extension : unique_extensions)
+			{
+				Logger::info("%d: %s", index, std::string(unique_extension).c_str());
+				++index;
+			}
+		}
+
+		// Match names against requested extension
+		outExtensions.clear();
+		bool all_extensions_found = true;
+		for (const auto& requested_extension : requestedExtensions)
+		{
+			const auto it = unique_extensions.find(requested_extension);
+			if (it == unique_extensions.end())
+			{
+				Logger::warn("Missing instance extension: %s", requested_extension.c_str());
+				all_extensions_found = false;
+				continue;
+			}
+			outExtensions.emplace_back(*it);
+			Logger::info("Applying instance extension: %s", it->c_str());
+		}
+
+		// Make sure we found all required extensions
+		if (!errorState.check(all_extensions_found, "Unable to find all required instance extensions"))
+			return false;
+
+	    return true;
 	}
 
 
@@ -592,7 +651,7 @@ namespace nap
 
 	static bool getSurfaceInstanceExtensions(SDL_Window* window, std::vector<std::string>& outExtensions, utility::ErrorState& errorState)
 	{
-		// Figure out the amount of extensions vulkan needs to interface with the os windowing system 
+		// Figure out the amount of extensions vulkan needs to interface with the os windowing system
 		// This is necessary because vulkan is a platform agnostic API and needs to know how to interface with the windowing system
 		unsigned int ext_count = 0;
 		if (!errorState.check(SDL_Vulkan_GetInstanceExtensions(window, &ext_count, nullptr) == SDL_TRUE, "Unable to find any valid SDL Vulkan instance extensions, is the Vulkan driver installed?"))
@@ -834,7 +893,7 @@ namespace nap
 			valid_devices.emplace_back(PhysicalDevice(physical_device, properties, selected_props.queueFlags, selected_queue_family_idx));
 
 			// Check if it's the preferred type, if so select it.
-			preferred_idx = properties.deviceType == preferredType && preferred_idx < 0 ? 
+			preferred_idx = properties.deviceType == preferredType && preferred_idx < 0 ?
 				valid_devices.size() -1 : preferred_idx;
 		}
 
@@ -871,69 +930,21 @@ namespace nap
 	 */
 	static bool createLogicalDevice(const PhysicalDevice& physicalDevice, const std::vector<std::string>& layerNames, const std::unordered_set<std::string>& extensionNames, bool print, bool robustBufferAccess, VkDevice& outDevice, utility::ErrorState& errorState)
 	{
+		std::vector<std::string> found_device_extensions;
+		if (!getAvailableDeviceExtensions(physicalDevice, extensionNames, layerNames, print, found_device_extensions, errorState))
+			return false;
+
+		// Copy instance extensions
+		std::vector<const char*> ext_names;
+		ext_names.reserve(extensionNames.size());
+		for (const auto& ext : extensionNames)
+			ext_names.emplace_back(ext.c_str());
+
 		// Copy layer names
 		std::vector<const char*> layer_names;
+		layer_names.reserve(layerNames.size());
 		for (const auto& layer : layerNames)
 			layer_names.emplace_back(layer.c_str());
-
-		// Get the number of available extensions for our graphics card
-		uint32 device_property_count(0);
-		if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), NULL, &device_property_count, NULL) == VK_SUCCESS, "Unable to acquire device extension property count"))
-			return false;
-		if (print) { Logger::info("Found %d Vulkan device extensions:", device_property_count); }
-
-		// Acquire their actual names
-		std::vector<VkExtensionProperties> device_properties(device_property_count);
-		if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), NULL, &device_property_count, device_properties.data()) == VK_SUCCESS, "Unable to acquire device extension property names"))
-			return false;
-
-		// Layer extensions
-		for (const auto& layer : layer_names)
-		{
-			uint32 property_count(0);
-			if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), layer, &property_count, NULL) == VK_SUCCESS, "Unable to acquire device extension property count for `%s`", layer))
-				return false;
-
-			std::vector<VkExtensionProperties> properties(property_count);
-			if (!errorState.check(vkEnumerateDeviceExtensionProperties(physicalDevice.getHandle(), layer, &property_count, properties.data()) == VK_SUCCESS, "Unable to acquire device extension property names for `%s`", layer))
-				return false;
-
-			std::vector<VkExtensionProperties> unique_properties;
-			unique_properties.reserve(property_count);
-			for (const auto& prop : properties)
-			{
-				// Check if the property is unique
-				auto it = std::find_if(device_properties.begin(), device_properties.end(), [prop=prop](const auto& device_property) {
-					return std::strncmp(&prop.extensionName[0], &device_property.extensionName[0], VK_MAX_EXTENSION_NAME_SIZE) == 0;
-				});
-				if (it == device_properties.end())
-					unique_properties.emplace_back(prop);
-			}
-
-			// Add to list of device properties
-			device_properties.reserve(device_properties.size() + unique_properties.size());
-			device_properties.insert(device_properties.end(), unique_properties.begin(), unique_properties.end());
-		}
-
-		// Match names against requested extension
-		std::vector<const char*> device_property_names;
-		for (int index = 0; index < device_properties.size(); ++index)
-		{
-			const VkExtensionProperties& ext_property = device_properties[index];
-			if (print) { Logger::info("%d: %s", index, ext_property.extensionName); }
-
-			auto it = extensionNames.find(std::string(ext_property.extensionName));
-			if (it != extensionNames.end())
-				device_property_names.emplace_back(ext_property.extensionName);
-		}
-
-		// Make sure we found all required device extensions
-		if (!errorState.check(extensionNames.size() == device_property_names.size(), "Unable to find all required device extensions"))
-			return false;
-
-		// Log the extensions we can use
-		for (const auto& name : device_property_names)
-			Logger::info("Applying device extension: %s", name);
 
 		// Create queue information structures used by device based on the previously fetched queue information from the physical device
 		std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
@@ -968,15 +979,15 @@ namespace nap
 				Logger::warn("Device feature 'RobustBufferAccess' is not available for the current device");
 		}
 
-		// Device creation information	
+		// Device creation information
 		VkDeviceCreateInfo create_info = { };
 		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		create_info.queueCreateInfoCount = queue_create_infos.size();
 		create_info.pQueueCreateInfos = &queue_create_infos[0];
 		create_info.ppEnabledLayerNames = layer_names.data();
 		create_info.enabledLayerCount = static_cast<uint32>(layer_names.size());
-		create_info.ppEnabledExtensionNames = device_property_names.data();
-		create_info.enabledExtensionCount = static_cast<uint32>(device_property_names.size());
+		create_info.ppEnabledExtensionNames = ext_names.data();
+		create_info.enabledExtensionCount = static_cast<uint32>(ext_names.size());
 		create_info.pNext = nullptr;
 		create_info.pEnabledFeatures = &device_features;
 		create_info.flags = 0;
@@ -2074,13 +2085,13 @@ namespace nap
 		// Get a compatible queue responsible for processing commands
 		vkGetDeviceQueue(mDevice, mPhysicalDevice.getQueueIndex(), 0, &mQueue);
 
-		VmaAllocatorCreateInfo allocatorInfo = {};
-		allocatorInfo.physicalDevice = mPhysicalDevice.getHandle();
-		allocatorInfo.device = mDevice;
-		allocatorInfo.vulkanApiVersion = mAPIVersion;
-		allocatorInfo.instance = mInstance;
+		VmaAllocatorCreateInfo allocator_info = {};
+		allocator_info.physicalDevice = mPhysicalDevice.getHandle();
+		allocator_info.device = mDevice;
+		allocator_info.vulkanApiVersion = mAPIVersion;
+		allocator_info.instance = mInstance;
 
-		if (!errorState.check(vmaCreateAllocator(&allocatorInfo, &mVulkanAllocator) == VK_SUCCESS, "Failed to create Vulkan Memory Allocator"))
+		if (!errorState.check(vmaCreateAllocator(&allocator_info, &mVulkanAllocator) == VK_SUCCESS, "Failed to create Vulkan Memory Allocator"))
 			return false;
 
 		// Create allocator for descriptor sets
