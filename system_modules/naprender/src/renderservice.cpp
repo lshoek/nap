@@ -530,6 +530,10 @@ namespace nap
 				all_extensions_found = false;
 				continue;
 			}
+			auto it_duplicate = std::find_if(outExtensions.begin(), outExtensions.end(), [requested = requested_extension](const auto& ext) { return ext == requested; });
+			if (it_duplicate != outExtensions.end())
+				continue;
+
 			outExtensions.emplace_back(*it);
 			Logger::info("Applying instance extension: %s", it->c_str());
 		}
@@ -554,7 +558,7 @@ namespace nap
 	        return false;
 
 		// Copy extension names to a set
-		std::unordered_set<std::string> unique_extensions;
+		std::set<std::string> unique_extensions;
 		std::transform(available_extensions.begin(), available_extensions.end(),
 			std::inserter(unique_extensions, unique_extensions.begin()), [](const auto& ext) { return std::string(ext.extensionName); });
 
@@ -594,12 +598,16 @@ namespace nap
 			const auto it = unique_extensions.find(requested_extension);
 			if (it == unique_extensions.end())
 			{
-				Logger::warn("Missing instance extension: %s", requested_extension.c_str());
+				Logger::warn("Missing device extension: %s", requested_extension.c_str());
 				all_extensions_found = false;
 				continue;
 			}
+			auto it_duplicate = std::find_if(outExtensions.begin(), outExtensions.end(), [requested = requested_extension](const auto& ext) { return ext == requested; });
+			if (it_duplicate != outExtensions.end())
+				continue;
+
 			outExtensions.emplace_back(*it);
-			Logger::info("Applying instance extension: %s", it->c_str());
+			Logger::info("Applying device extension: %s", it->c_str());
 		}
 
 		// Make sure we found all required extensions
