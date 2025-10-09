@@ -47,8 +47,6 @@ namespace nap
         void update(double deltaTime) override;
 
     private:
-		virtual void registerObjectCreators(rtti::Factory& factory) override;
-
         // Used by input component to register itself to receive incoming midi events
         void registerInputComponent(MidiInputComponentInstance& component) { mInputComponents.emplace(&component); }
 
