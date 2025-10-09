@@ -1330,6 +1330,8 @@ namespace nap
 			mWindow = SDL_CreateWindow("Dummy", 16, 16, SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN);
 			if (error.check(mWindow != nullptr, "Failed to create temporary SDL window"))
 				return createSurface(mWindow, mInstance, mSurface, error);
+
+			error.fail(SDL_GetError());
 			return false;
 		}
 
