@@ -166,14 +166,14 @@ namespace nap
 		clear_values[1].depthStencil = {1.0f, 0 };
 
 		// Setup render pass
-		VkRenderPassBeginInfo render_pass_info = {};
-		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		render_pass_info.renderPass = mRenderPass;
-		render_pass_info.framebuffer = mFramebuffers[mLayerIndex];
-		render_pass_info.renderArea.offset = { 0, 0 };
-		render_pass_info.renderArea.extent = { static_cast<uint32_t>(mSize.x), static_cast<uint32_t>(mSize.y) };
-		render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-		render_pass_info.pClearValues = clear_values.data();
+		VkRenderPassBeginInfo renderpass_info = {};
+		renderpass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderpass_info.renderPass = mRenderPass;
+		renderpass_info.framebuffer = mFramebuffers[mLayerIndex];
+		renderpass_info.renderArea.offset = { 0, 0 };
+		renderpass_info.renderArea.extent = { static_cast<uint32_t>(mSize.x), static_cast<uint32_t>(mSize.y) };
+		renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+		renderpass_info.pClearValues = clear_values.data();
 
 		// Begin render pass
 		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &renderpass_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -184,7 +184,6 @@ namespace nap
 		rect.extent = { static_cast<uint32_t>(mSize.x), static_cast<uint32_t>(mSize.y) };
 		vkCmdSetScissor(mRenderService->getCurrentCommandBuffer(), 0, 1, &rect);
 
-		// Set up viewport
 		auto size = glm::vec2(mSize);
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
