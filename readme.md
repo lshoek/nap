@@ -11,13 +11,14 @@
 *	[Where to Start](#where-to-start)
 	* [System Compatibility](#system-compatibility)
 	* [Binary Packages](#binary-packages)
-	* [Raspberry Pi](#raspberry-pi)
+	* [Raspberry Pi](#raspberry-pi) 
 *	[Compilation](#compilation)
 	*	[Dependencies](#dependencies)
 	*	[Create the Solution](#create-the-solution)
 	*	[Run a Demo](#run-a-demo)
 	*	[Work Against Source](#work-against-source)
 	*	[Package](#build-distributable-nap-package)
+ 	*	[Branches](#branches) 
 *	[Contributing](#contributing)
 *	[License](#license)
 	
@@ -52,14 +53,14 @@ Visit [nap-labs.tech](https://nap-labs.tech/use-cases) for more examples
 
 ![Between Mind and Matter, Nick Verstand](https://download.nap-labs.tech/shared/bmm_1280.jpg)
 [Between Mind and Matter](http://www.nickverstand.com/) by Nick Verstand, Marcel Smit and 4DSOUND
+![Shylight, Studio Drift](https://download.nap-labs.tech/shared/shylight_nycb.jpg)
+[Shylight](https://studiodrift.com/work/shylight/) by Studio Drift
 ![Habitat, Heleen Blanken](https://download.nap-labs.tech/shared/habitat_1280.jpg)
 [Habitat](https://www.heleenblanken.com/habitatbyheleenblanken) by Heleen Blanken, Naivi and Stijn van Beek
-![Shylight, Studio Drift](https://download.nap-labs.tech/shared/shylight_basel_1280.jpg)
-[Shylight](https://www.studiodrift.com/work#/work/shylight/) by Studio Drift
 ![4DSound System](https://download.nap-labs.tech/shared/4D_1280.jpg)
 [4DSound System](https://4dsound.net/)
-![NAP Framework](https://download.nap-labs.tech/shared/napkin_multiwindow_demo_hq.jpg)
-[NAP Framework](https://nap.tech) editor & demo
+![NAP Framework](https://download.nap-labs.tech/shared/napkin_interface.jpg)
+[NAP Framework](https://nap-framework.tech) editor & audiovisualfft demo
 
 # Where to Start
 
@@ -67,23 +68,36 @@ Visit [nap-labs.tech](https://nap-labs.tech/use-cases) for more examples
 
 Currently, whether working with the packaged framework release or against the framework source, we support the following architectures and operating systems:
 
-**x86**
-```
-x86-64: Windows 10 & 11, Visual Studio (2019 & 2022) - MSVC
-x86-64: Ubuntu Linux LTS (v22.04 & v24.04) - GCC
-```
-**ARM**
-```
-arm64: Raspberry Pi OS (v12 Bookworm) - GCC
-```
+### Windows
+
+| arch   | os                | version      | compiler    |
+|--------|-------------------|--------------|-------------|
+| x86-64 | Windows           | 10, 11       | msvc 16, 17 |
+
+The default `CMake` generator is Visual Studio 2019 or 2022.
+
+### Linux
+
+| arch   | os                | version | compiler    |
+|--------|-------------------|---------|-------------|
+| x86-64 | Ubuntu            | 24.04   | gcc         |
+| arm64  | Raspberry Pi OS   | 12      | gcc         |
+
+The default `CMake` generator is `Make`. 
+
+Other Linux distributions *may* work, but they have not been tested and are not officially supported.
+
+#### Display Server
+
+When `Wayland` is configured as the display server, NAP applications and Napkin (the editor) will rely on `XWayland` for compatibility. It is recommended to use `X11` instead of Wayland until Wayland is fully supported.
+
+#### Raspberry Pi
+
+Only the `Raspberry Pi 4 & 5` running `Debian Bookworm (v12, arm64)` is 'fully' supported. Headless applications and services without graphics should run on older models, although this has not been tested. The editor (napkin) only works on the Raspberry Pi 4 and up.
 
 ## Binary Packages
 
 Pre-compiled packages of official NAP releases are made available for download on [Github](https://github.com/napframework/nap/releases) for all supported platforms. Follow the [framework installation instructions](https://docs.nap-framework.tech/pages.html) to get started. Continue reading below to compile, package and work with NAP from source.
-
-## Raspberry Pi
-
-Only the `Raspberry Pi 4 & 5` running `Debian Bookworm (v12, arm64)` is 'fully' supported. Headless applications and services without graphics should run on older models, although this has not been tested. The editor (napkin) only works on the Raspberry Pi 4 and higher.
 
 # Compilation
 
@@ -206,6 +220,20 @@ Some other useful flags:
 
 More options for packaging can be queried by adding the flag `--help` when running the script.
 
+## Branches
+
+### main
+
+The current [stable branch](https://github.com/napframework/nap/tree/main): It generally reflects the latest release, plus a few critical bug-fixes.
+
+### 0.8
+
+The bleeding edge: [0.8](https://github.com/napframework/nap/tree/0.8) introduces many new features, improvements and portential fixes that are scheduled for a new official release.
+
+### build
+
+An [alternative build system](https://github.com/napframework/nap/tree/build-system): Including support for macOS and a simplified CMAKE interface, developed by [Stijn van Beek](https://github.com/stijnvanbeek).
+
 # Contributing
 
 We welcome contributions and potential bug fixes. But before you submit any code for review make sure to read and follow our [C++ styleguide](styleguide/styleguide.md). Also take into consideration that reviewing code takes time: Be as thorough and explicit as possible. 
@@ -215,7 +243,7 @@ Use the github [issues](https://github.com/napframework/nap/issues) page for bug
 New modules are not considered unless useful, vital or important enough to have as part of the core release. If you feel a module is missing we would like to [hear](https://github.com/orgs/napframework/discussions) from you. If a module depends on a third-party library, linkage should be dynamic and not violate the NAP license policy. Static linkage is discouraged unless recommended by the library or when a NAP application, that uses the module, doesn't require the library to link and run. In that case all third-party code is compiled into the module when NAP is packaged. Third-party dependencies must work cross-platform and must be compiled using
 ```
 MSVC, Platform Toolset v142 on Windows 10
-GCC <= 11 on Ubuntu LTS 22.04
+GCC <= 13.3.0 on Ubuntu LTS 24.04
 ```
 
 # License
