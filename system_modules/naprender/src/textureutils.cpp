@@ -86,6 +86,7 @@ namespace nap
             uint mipLevel, uint mipLevelCount,
             uint layer, uint layerCount, VkImageAspectFlags aspect)
         {
+			// Image memory barrier
 			VkImageMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			barrier.srcAccessMask = srcAccessMask;
@@ -158,19 +159,21 @@ namespace nap
 					i-1, 1, layer, layerCount,
 					aspect);
 
+				// Create blit structure
 				VkImageBlit blit = {};
-				blit.srcOffsets[0] = { 0, 0, 0 };
-				blit.srcOffsets[1] = { mip_width, mip_height, 1 };
 				blit.srcSubresource.aspectMask = aspect;
-				blit.srcSubresource.mipLevel = i-1;
+				blit.srcSubresource.mipLevel = i - 1;
 				blit.srcSubresource.baseArrayLayer = layer;
 				blit.srcSubresource.layerCount = layerCount;
-				blit.dstOffsets[0] = { 0, 0, 0 };
-				blit.dstOffsets[1] = { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 };
+				blit.srcOffsets[0] = { 0, 0, 0 };
+				blit.srcOffsets[1] = { mip_width, mip_height, 1 };
+
 				blit.dstSubresource.aspectMask = aspect;
 				blit.dstSubresource.mipLevel = i;
 				blit.dstSubresource.baseArrayLayer = layer;
 				blit.dstSubresource.layerCount = layerCount;
+				blit.dstOffsets[0] = { 0, 0, 0 };
+				blit.dstOffsets[1] = { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 };
 
 				// Blit
 				vkCmdBlitImage(buffer,
@@ -231,8 +234,10 @@ namespace nap
 			blit.srcSubresource.mipLevel = 0;
 			blit.srcSubresource.baseArrayLayer = 0;
 			blit.srcSubresource.layerCount = 1;
+
 			blit.srcOffsets[0] = { 0, 0, 0 };
 			blit.srcOffsets[1] = { srcTexture.getWidth(), srcTexture.getHeight(), 1 };
+
 			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			blit.dstSubresource.mipLevel = 0;
 			blit.dstSubresource.baseArrayLayer = 0;
@@ -289,17 +294,22 @@ namespace nap
 					0, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 			}
 
+			// Create image copy structure
 			VkImageCopy region = {};
 			region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			region.srcSubresource.mipLevel = 0;
 			region.srcSubresource.baseArrayLayer = 0;
 			region.srcSubresource.layerCount = 1;
+
 			region.srcOffset = { 0, 0, 0 };
+
 			region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			region.dstSubresource.mipLevel = 0;
 			region.dstSubresource.baseArrayLayer = 0;
 			region.dstSubresource.layerCount = 1;
+
 			region.dstOffset = { 0, 0, 0 };
+
 			region.extent = {
 				static_cast<uint32_t>(srcTexture.getWidth()),
 				static_cast<uint32_t>(srcTexture.getHeight()),

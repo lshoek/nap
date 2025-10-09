@@ -99,16 +99,16 @@ namespace nap
 		}
 
 		// Create framebuffer
-		VkFramebufferCreateInfo framebuffer_info = {};
-		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebuffer_info.renderPass = mRenderPass;
-		framebuffer_info.attachmentCount = mRasterizationSamples != VK_SAMPLE_COUNT_1_BIT ? 2 : 1;
-		framebuffer_info.pAttachments = attachments.data();
-		framebuffer_info.width = framebuffer_size.width;
-		framebuffer_info.height = framebuffer_size.height;
-		framebuffer_info.layers = 1;
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = mRenderPass;
+		framebufferInfo.attachmentCount = attachment_count;
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width = framebuffer_size.width;
+		framebufferInfo.height = framebuffer_size.height;
+		framebufferInfo.layers = 1;
 
-		if (!errorState.check(vkCreateFramebuffer(mRenderService->getDevice(), &framebuffer_info, nullptr, &mFramebuffer) == VK_SUCCESS, "Failed to create framebuffer"))
+		if (!errorState.check(vkCreateFramebuffer(mRenderService->getDevice(), &framebufferInfo, nullptr, &mFramebuffer) == VK_SUCCESS, "Failed to create framebuffer"))
 			return false;
 
 		return true;
@@ -124,17 +124,17 @@ namespace nap
 		const glm::ivec2 offset = { 0, 0 };
 
 		// Setup render pass
-		VkRenderPassBeginInfo renderpass_info = {};
-		renderpass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpass_info.renderPass = mRenderPass;
-		renderpass_info.framebuffer = mFramebuffer;
-		renderpass_info.renderArea.offset = { offset.x, offset.y };
-		renderpass_info.renderArea.extent = { static_cast<uint>(size.x), static_cast<uint>(size.y) };
-		renderpass_info.clearValueCount = 1;
-		renderpass_info.pClearValues = &clear_value;
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = mRenderPass;
+		renderPassInfo.framebuffer = mFramebuffer;
+		renderPassInfo.renderArea.offset = { offset.x, offset.y };
+		renderPassInfo.renderArea.extent = { static_cast<uint>(size.x), static_cast<uint>(size.y) };
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clear_value;
 
 		// Begin render pass
-		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &renderpass_info, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		// Ensure scissor and viewport are covering complete area
 		VkRect2D rect;

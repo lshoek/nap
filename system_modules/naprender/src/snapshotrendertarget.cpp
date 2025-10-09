@@ -60,7 +60,7 @@ namespace nap
 
 			// WAW (write-after-write) hazard
 			// This render pass does not read output from the previous render pass, but a memory dependency is still required to sync writes
-			VkSubpassDependency dependency = {};
+			VkSubpassDependency dependency;
 			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 			dependency.dstSubpass = 0;
 
@@ -101,7 +101,7 @@ namespace nap
 			resolve_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			resolve_attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			VkAttachmentReference resolve_attachment_ref = {};
+			VkAttachmentReference resolve_attachment_ref {};
 			resolve_attachment_ref.attachment = 2;
 			resolve_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
@@ -261,31 +261,32 @@ namespace nap
 		clearValues[2].color = { clear_color[0], clear_color[1], clear_color[2], clear_color[3] };
 
 		// Setup render pass
-		VkRenderPassBeginInfo renderpass_info = {};
-		renderpass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpass_info.renderPass = mRenderPass;
-		renderpass_info.framebuffer = mFramebuffers[mCellIndex];
-		renderpass_info.renderArea.offset = { 0, 0 };
-		renderpass_info.renderArea.extent = { mSize.x, mSize.y };
-		renderpass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderpass_info.pClearValues = clearValues.data();
+		VkRenderPassBeginInfo render_pass_info = {};
+		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		render_pass_info.renderPass = mRenderPass;
+		render_pass_info.framebuffer = mFramebuffers[mCellIndex];
+		render_pass_info.renderArea.offset = { 0, 0 };
+		render_pass_info.renderArea.extent = { mSize.x, mSize.y };
+		render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		render_pass_info.pClearValues = clearValues.data();
 
 		// Begin render pass
 		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &renderpass_info, VK_SUBPASS_CONTENTS_INLINE);
 
 		// Ensure scissor and viewport are covering the cell area
+		glm::uvec2 size = getBufferSize();
 		VkRect2D rect = {};
 		rect.offset.x = 0;
 		rect.offset.y = 0;
-		rect.extent.width = mSize.x;
-		rect.extent.height = mSize.y;
+		rect.extent.width = size.x;
+		rect.extent.height = size.y;
 		vkCmdSetScissor(mRenderService->getCurrentCommandBuffer(), 0, 1, &rect);
 
 		VkViewport viewport = {};
 		viewport.x = 0.0f;
-		viewport.y = mSize.y;
-		viewport.width = mSize.x;
-		viewport.height = -mSize.y;
+		viewport.y = size.y;
+		viewport.width = size.x;
+		viewport.height = -size.y;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 		vkCmdSetViewport(mRenderService->getCurrentCommandBuffer(), 0, 1, &viewport);

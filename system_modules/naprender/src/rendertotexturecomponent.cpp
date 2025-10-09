@@ -32,6 +32,7 @@ RTTI_END_CLASS
 RTTI_BEGIN_CLASS_NO_DEFAULT_CONSTRUCTOR(nap::RenderToTextureComponentInstance)
 	RTTI_CONSTRUCTOR(nap::EntityInstance&, nap::Component&)
 	RTTI_FUNCTION(nap::material::instance::getOrCreateMaterial, &nap::RenderToTextureComponentInstance::getOrCreateMaterial)
+	RTTI_FUNCTION("draw", &nap::RenderToTextureComponentInstance::draw)
 RTTI_END_CLASS
 
 //////////////////////////////////////////////////////////////////////////

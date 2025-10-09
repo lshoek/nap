@@ -130,7 +130,7 @@ namespace nap
 		VkFramebufferCreateInfo framebuffer_info = {};
 		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebuffer_info.renderPass = mRenderPass;
-		framebuffer_info.attachmentCount = mRasterizationSamples == VK_SAMPLE_COUNT_1_BIT ? 2 : 3;
+		framebuffer_info.attachmentCount = static_cast<uint32_t>((mRasterizationSamples == VK_SAMPLE_COUNT_1_BIT) ? 2 : 3);
 		framebuffer_info.pAttachments = attachments.data();
 		framebuffer_info.width = framebuffer_size.width;
 		framebuffer_info.height = framebuffer_size.height;
@@ -187,14 +187,14 @@ namespace nap
 		clear_values[2].color = { mClearColor[0], mClearColor[1], mClearColor[2], mClearColor[3] };
 
 		// Setup render pass
-		VkRenderPassBeginInfo renderpass_info = {};
-		renderpass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpass_info.renderPass = mRenderPass;
-		renderpass_info.framebuffer = mFramebuffer;
-		renderpass_info.renderArea.offset = { 0, 0 };
-		renderpass_info.renderArea.extent = { static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y) };
-		renderpass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-		renderpass_info.pClearValues = clear_values.data();
+		VkRenderPassBeginInfo render_pass_info = {};
+		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		render_pass_info.renderPass = mRenderPass;
+		render_pass_info.framebuffer = mFramebuffer;
+		render_pass_info.renderArea.offset = { 0, 0 };
+		render_pass_info.renderArea.extent = { static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y) };
+		render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+		render_pass_info.pClearValues = clear_values.data();
 
 		// Begin render pass
 		vkCmdBeginRenderPass(mRenderService->getCurrentCommandBuffer(), &renderpass_info, VK_SUBPASS_CONTENTS_INLINE);

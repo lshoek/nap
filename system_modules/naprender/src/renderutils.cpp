@@ -14,6 +14,7 @@ RTTI_BEGIN_ENUM(nap::ERasterizationSamples)
 	RTTI_ENUM_VALUE(nap::ERasterizationSamples::Max,		"Max")
 RTTI_END_ENUM;
 
+
 namespace nap
 {
 	namespace utility
@@ -89,8 +90,7 @@ namespace nap
 			renderpass_info.pDependencies = dependencies.data();
 
 			// Single-sample render pass
-			if (!multi_sample) 
-			{
+			if (!multi_sample) {
 				std::array<VkAttachmentDescription, 2> attachments = { color_attachment, depth_attachment };
 				renderpass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
 				renderpass_info.pAttachments = attachments.data();
@@ -202,6 +202,7 @@ namespace nap
 
 		bool createLayered2DImageView(VkDevice device, VkImage image, VkFormat format, uint32 mipLevels, VkImageAspectFlags aspectFlags, uint32 layerIndex, uint32 layerCount, VkImageView& outImageView, utility::ErrorState& errorState)
 		{
+			// Image view creation info
 			VkImageViewCreateInfo view_info = {};
 			view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			view_info.image = image;
@@ -218,6 +219,7 @@ namespace nap
 
 		bool createCubeImageView(VkDevice device, VkImage image, VkFormat format, uint32 mipLevels, VkImageAspectFlags aspectFlags, uint32 layerCount, VkImageView& outImageView, utility::ErrorState& errorState)
 		{
+			// Image view creation info
 			VkImageViewCreateInfo view_info = {};
 			view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			view_info.image = image;
