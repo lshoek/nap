@@ -14,7 +14,7 @@
 #include <nap/core.h>
 #include <color.h>
 #include <SDL_clipboard.h>
-#include <SDL_syswm.h>
+#include <SDL_properties.h>
 #include <SDL_mouse.h>
 #include <SDL_keyboard.h>
 #include <nap/logger.h>
@@ -335,11 +335,9 @@ namespace nap
 	static void setGuiWindow(SDL_Window* window)
 	{
 #ifdef _WIN32
+		auto hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 		ImGuiIO& io = ImGui::GetIO();
-		SDL_SysWMinfo wmInfo;
-		SDL_VERSION(&wmInfo.version);
-		SDL_GetWindowWMInfo(window, &wmInfo);
-		io.ImeWindowHandle = wmInfo.info.win.window;
+		io.ImeWindowHandle = hwnd;
 #else
 		(void)window;
 #endif
@@ -470,22 +468,16 @@ namespace nap
 		// Text input event
 		else if (event.get_type().is_derived_from(RTTI_OF(TextInputEvent)))
 		{
-			ImGuiIO& io = ImGui::GetIO();
 			const auto& press_event = static_cast<const TextInputEvent&>(event);
-			io.AddInputCharactersUTF8(press_event.mText.c_str());
+			ImGui::GetIO().AddInputCharactersUTF8(press_event.mText.c_str());
 		}
 
 		// Mouse wheel event
 		else if (event.get_type().is_derived_from(RTTI_OF(MouseWheelEvent)))
 		{
 			const auto& wheel_event = static_cast<const MouseWheelEvent&>(event);
-#ifdef __APPLE__
-			int delta = ImGui::GetIO().KeyShift ? wheel_event.mX * -1 : wheel_event.mY;
-#else
 			int delta = wheel_event.mY;
-#endif
-			ImGuiIO& io = ImGui::GetIO();
-			io.AddMouseWheelEvent(0.0f, delta > 0 ? 1.0f : -1.0f);
+			ImGui::GetIO().AddMouseWheelEvent(0.0f, delta > 0 ? 1.0f : -1.0f);
 		}
 
 		return context->second->mContext;
@@ -597,7 +589,7 @@ namespace nap
 		mRenderService->windowRemoved.connect(mWindowRemovedSlot);
 
 		// Global GUI & DPI scale
-		mGuiScale = math::max<float>(mConfiguration->mScale, 0.05f);
+		mGuiScale = math::max<float>(mConfiguration->mScale, math::epsilon<float>());
 
 		// Get palette associated with scheme
 		nap::gui::registerCustomPalette(mConfiguration->mCustomColors);
@@ -699,19 +691,14 @@ namespace nap
 		ImGuiContext* new_context = nullptr;
 		if (mFontAtlas == nullptr)
 		{
-			// Calculate max dpi scale if high dpi rendering is enabled
-			if (mRenderService->getHighDPIEnabled())
-			{
-				for (const auto& display : mRenderService->getDisplays())
-				{
-					float dpi_scale = math::max<float>(display.getHorizontalDPI(), gui::dpi) / gui::dpi;
-					mDPIScale = dpi_scale > mDPIScale ? dpi_scale : mDPIScale;
-				}
-			}
+			// Calculate reference scaling factor based on reference display
+			// TODO: a different font atlas should be created for every variation in scale,
+			// TODO: and dynamically bound every frame, based on active window scaling factor.
+			mReferenceScale = math::max<float>(window.getDisplayScale(), 1.0f);
 
 			// Create atlas, scale based on dpi of main monitor
 			const char* font_file = mConfiguration->mFontFile.empty() ? nullptr : mConfiguration->mFontFile.c_str();
-			float font_size = mConfiguration->mFontSize * mDPIScale * mGuiScale;
+			float font_size = mConfiguration->mFontSize * mReferenceScale * mGuiScale;
 			mFontAtlas = createFontAtlas(font_size, mConfiguration->mFontOversampling, mConfiguration->mFontSpacing, font_file);
 
 			// Create style
@@ -733,9 +720,7 @@ namespace nap
 
 		// Add context, set display index & push scale accordingly
 		auto it = mContexts.emplace(std::make_pair(&window, std::make_unique<GUIContext>(new_context, mStyle.get())));
-		const auto* display = mRenderService->findDisplay(window);
-		assert(display != nullptr);
-		pushScale(*it.first->second, *display);
+		pushScale(*it.first->second, window);
 
 		// Connect so we can listen to window events such as move
 		window.mWindowEvent.connect(mWindowEventSlot);
@@ -762,23 +747,21 @@ namespace nap
 		if (windowEvent.get_type().is_derived_from(RTTI_OF(nap::WindowMovedEvent)))
 		{
 			// Get display
-			nap::RenderWindow* window = mRenderService->findWindow(windowEvent.mWindow);
-			assert(window != nullptr);
-			const Display* display = mRenderService->findDisplay(*window);
-			assert(display != nullptr);
+			nap::RenderWindow* window = mRenderService->findWindow(windowEvent.mWindow); assert(window != nullptr);
+			auto display_index = window->getDisplayIndex(); assert(display_index >= 0);
 
 			// Get cached display
 			auto it = mContexts.find(window);
 			assert(it != mContexts.end());
-			assert(it->second->mDisplay != nullptr);
-			const auto& cached_display = *it->second->mDisplay;
+			const auto& gui_ctx = *it->second;
 
 			// Check if changed, if so update (push) scale
-			if (cached_display != *display)
+			if (gui_ctx.mDisplayIndex != display_index)
 			{
 				// Display Changed!
-				//nap::Logger::info("Display changed from: %d to %d", cached_display.getIndex(), display->getIndex());
-				pushScale(*it->second, *display);
+				nap::Logger::debug("Window '%s': Display changed from index %d to %d", window->mID.c_str(),
+					gui_ctx.mDisplayIndex, display_index);
+				pushScale(*it->second, *window);
 			}
 		}
 	}
@@ -863,40 +846,26 @@ namespace nap
 	}
 
 
-	void IMGuiService::pushScale(GUIContext& context, const Display& display)
+	void IMGuiService::pushScale(GUIContext& context, const nap::RenderWindow& window)
 	{
-		// Store display
-		context.mDisplay = &display;
+		// Store display index
+		context.mDisplayIndex = window.getDisplayIndex();
 
-		// Don't scale if high dpi rendering is disabled
-		if (mRenderService->getHighDPIEnabled())
-		{
-			// Compute overall Gui and font scaling factor
-			// Overall font scaling factor is always <= 1.0, because the font is created based on the display with the highest DPI value
-			float gscale = mGuiScale * (math::max<float>(display.getHorizontalDPI(), gui::dpi) / gui::dpi);
-			float fscale = math::max<float>(display.getHorizontalDPI(), gui::dpi) / (mDPIScale * gui::dpi);
+		// Compute overall Gui and font scaling factor
+		// Overall font scaling factor is always <= 1.0, because the font is created based on the display with the highest DPI value
+		float gscale = mGuiScale * window.getDisplayScale();
+		float fscale = window.getDisplayScale() / mReferenceScale;
 
-			// Push scaling for window and font based on new display
-			// We must push the original style first before we can scale
-			context.activate();
-			ImGui::GetStyle() = *context.mStyle;
-			ImGui::GetStyle().ScaleAllSizes(gscale);
-			ImGui::GetIO().FontGlobalScale = fscale;
-			context.deactivate();
+		// Push scaling for window and font based on new display
+		// We must push the original style first before we can scale
+		context.activate();
+		ImGui::GetStyle() = *context.mStyle;
+		ImGui::GetStyle().ScaleAllSizes(gscale);
+		ImGui::GetIO().FontGlobalScale = fscale;
+		context.deactivate();
 
-			// Store scale, ensures custom widgets can scale accordingly
-			context.mScale = gscale;
-		}
-		else
-		{
-			context.activate();
-			ImGui::GetStyle() = *context.mStyle;
-			ImGui::GetStyle().ScaleAllSizes(mGuiScale);
-			context.deactivate();
-
-			// Store scale, ensures custom widgets can scale accordingly
-			context.mScale = mGuiScale;
-		}
+		// Store scale, ensures custom widgets can scale accordingly
+		context.mScale = gscale;
 	}
 
 
@@ -1107,7 +1076,6 @@ namespace nap
 	{
 		ImGui::DestroyContext(mContext);
 		mStyle = nullptr;
-		mDisplay = nullptr;
 	}
 
 

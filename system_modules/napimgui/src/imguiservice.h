@@ -323,7 +323,7 @@ namespace nap
 
 			std::array<int, 3> mPointerID					= { gui::pointerInvalidID };	///< Pointer id, -1 for pointer, 0+ for finger
 			float mScale									= 1.0f;							///< GUI Scale
-			const Display* mDisplay							= nullptr;						///< Current display
+			int mDisplayIndex								= -1;							///< Current display
 			ImGuiContext* mContext							= nullptr;						///< Associated ImGUI context
 			ImGuiContext* mPreviousContext					= nullptr;						///< Context active before this one
 			ImGuiStyle* mStyle								= nullptr;						///< Style of context
@@ -366,7 +366,7 @@ namespace nap
 		/**
 		 * Calculates and applies a gui scaling factor based on the given display and associated dpi settings
 		 */
-		void pushScale(GUIContext& context, const Display& display);
+		void pushScale(GUIContext& context, const nap::RenderWindow& window);
 
 		/**
 		 * Add key event to given context
@@ -388,8 +388,8 @@ namespace nap
 		std::unordered_map<RenderWindow*, std::unique_ptr<GUIContext>> mContexts;
 		std::unique_ptr<ImFontAtlas> mFontAtlas = nullptr;
 		std::unique_ptr<ImGuiStyle> mStyle = nullptr;
-		float mGuiScale = 1.0f;		///< Overall GUI scaling factor
-		float mDPIScale = 1.0f;		///< Max font scaling factor, based on the highest display dpi or 1.0 (default) when high dpi if off
+		float mGuiScale = 1.0f;			///< Overall GUI scaling factor
+		float mReferenceScale = 1.0f;		///< Max font scaling factor, based on the highest display dpi or 1.0 (default) when high dpi if off
 
 		// Selected colour palette and style
 		IMGuiServiceConfiguration* mConfiguration = nullptr;
