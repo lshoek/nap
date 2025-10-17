@@ -2016,7 +2016,7 @@ namespace nap
 		const bool is_debug_enabled = render_config->mEnableDebug;
 		if (is_debug_enabled)
 		{
-			if (!errorState.check(getDebugInstanceExtensions(is_debug_utils_found, required_instance_extension_names, errorState), "Failed to find available debug extension while debug is enabled"))
+			if (!errorState.check(getDebugInstanceExtensions(is_debug_utils_found, instance_extensions, errorState), "Failed to find available debug extension while debug is enabled"))
 				return false;
 		}
 
@@ -2040,12 +2040,12 @@ namespace nap
 
 		// Add additional requests
 		for (const auto& ext : render_config->mAdditionalInstanceExtensions)
-			required_instance_extension_names.emplace_back(ext);
+			instance_extensions.emplace_back(ext);
 
 		// Get all available vulkan instance extensions
 		bool print_extensions = render_config->mPrintAvailableExtensions;
 		std::vector<std::string> found_instance_extensions;
-		if (!getAvailableInstanceExtensions(required_instance_extension_names, found_layers, print_extensions, found_instance_extensions, errorState))
+		if (!getAvailableInstanceExtensions(instance_extensions, found_layers, print_extensions, found_instance_extensions, errorState))
 			return false;
 
 		// Create Vulkan Instance together with required instance extensions and layers
