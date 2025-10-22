@@ -10,12 +10,10 @@
 #include "renderglobals.h"
 #include "uniforminstance.h"
 #include "dofshader.h"
-#include "textureutils.h"
 
 // External Includes
 #include <entity.h>
 #include <nap/core.h>
-#include <orthocameracomponent.h>
 
 // nap::RenderDOFComponent run time class definition 
 RTTI_BEGIN_CLASS(nap::RenderDOFComponent)
