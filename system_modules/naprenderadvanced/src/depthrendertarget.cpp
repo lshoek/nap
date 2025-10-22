@@ -102,7 +102,7 @@ namespace nap
 		VkFramebufferCreateInfo framebuffer_info = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.renderPass = mRenderPass,
-			.attachmentCount = mRasterizationSamples != VK_SAMPLE_COUNT_1_BIT ? 2 : 1,
+			.attachmentCount = mRasterizationSamples != VK_SAMPLE_COUNT_1_BIT ? uint32_t(2) : uint32_t(1),
 			.pAttachments = attachments.data(),
 			.width = framebuffer_size.width,
 			.height = framebuffer_size.height,
