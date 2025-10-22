@@ -317,7 +317,7 @@ namespace nap
 
 	const glm::ivec2 SnapshotRenderTarget::getBufferSize() const
 	{
-		return static_cast<glm::ivec2>(mSize);
+		return mSize;
 	}
 
 
