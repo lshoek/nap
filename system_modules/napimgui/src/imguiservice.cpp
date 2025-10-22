@@ -315,7 +315,7 @@ namespace nap
 		font_config.OversampleH = fontSampling.x;
 		font_config.OversampleV = fontSampling.y;
 
-		// ImGui note: (REMOVED AT IT SEEMS LARGELY OBSOLETE. PLEASE REPORT IF YOU WERE USING THIS). Extra spacing (in pixels) between glyphs when rendered: essentially add to glyph->AdvanceX. Only X axis is supported for now.
+		// ImGui note: (REMOVED AS IT SEEMS LARGELY OBSOLETE. PLEASE REPORT IF YOU WERE USING THIS). Extra spacing (in pixels) between glyphs when rendered: essentially add to glyph->AdvanceX. Only X axis is supported for now.
 		// font_config.GlyphExtraSpacing.x = fontSpacing;
 
 		// Add font, scale based on main dpi (TODO: Make Monitor Aware)
@@ -336,8 +336,7 @@ namespace nap
 	{
 #ifdef _WIN32
 		auto hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
-		ImGuiIO& io = ImGui::GetIO();
-		io.ImeWindowHandle = hwnd;
+		ImGui::GetIO().ImeWindowHandle = hwnd;
 #else
 		(void)window;
 #endif
@@ -488,8 +487,7 @@ namespace nap
 	{
 		// Get the interface
 		ImGui::SetCurrentContext(context);
-		ImGuiIO& io = ImGui::GetIO();
-		return io.WantCaptureKeyboard;
+		return ImGui::GetIO().WantCaptureKeyboard;
 	}
 
 
@@ -497,16 +495,14 @@ namespace nap
 	{
 		// Get the interface
 		ImGui::SetCurrentContext(context);
-		ImGuiIO& io = ImGui::GetIO();
-		return io.WantCaptureMouse;
+		return ImGui::GetIO().WantCaptureMouse;
 	}
 
 
 	void IMGuiService::addInputCharachter(ImGuiContext* context, nap::uint character)
 	{
 		ImGui::SetCurrentContext(context);
-		ImGuiIO& io = ImGui::GetIO();
-		io.AddInputCharacter(character);
+		ImGui::GetIO().AddInputCharacter(character);
 	}
 
 
@@ -826,20 +822,6 @@ namespace nap
 		// We manage scaling of the GUI manually, removing the need to scale the buffer when high DPI is enabled
 		io.DisplaySize = { static_cast<float>(window.getBufferSize().x), static_cast<float>(window.getBufferSize().y) };
 		io.DisplayFramebufferScale = { 1.0f, 1.0f };
-
-		// // Check if the mouse button has been released this frame. Take into consideration current state if press is from a mouse.
-		// // This is required because the user can release the button outside of SDL window bounds, in which case no release event is generated.
-		// bool released = context.mMouseRelease[i];
-		// if (!released && io.MouseDown[i] && context.mPointerID[i] == gui::pointerMouseID)
-		// 	released = (SDL_GetGlobalMouseState(nullptr, nullptr) & SDL_BUTTON(i + 1)) == 0;
-		//
-		// // If the mouse button was released this frame -> disable the press for next frame.
-		// // This ensures that buttons that are pressed and released within the same frame are always registered.
-		// if (released)
-		// {
-		// 	context.mMousePressed[i] = false;
-		// 	context.mMouseRelease[i] = false;
-		// }
 
 		// Begin new frame
 		ImGui::NewFrame();
