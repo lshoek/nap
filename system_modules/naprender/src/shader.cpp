@@ -331,9 +331,15 @@ static std::unique_ptr<glslang::TShader> parseShader(VkDevice device, nap::uint3
 	glslang::EShTargetLanguageVersion target_language_version;
 
 	// The client/language version must match with the Vulkan device's version
-	if (vulkanVersion >= VK_API_VERSION_1_1)
+	if (vulkanVersion >= VK_API_VERSION_1_2)
 	{
-		// For version 1.1 or higher, use Vulkan 1.1 with SPV 1.3
+		// For version 1.2 or higher, use Vulkan 1.2 with SPV 1.5
+		target_client_version = glslang::EShTargetVulkan_1_2;
+		target_language_version = glslang::EShTargetSpv_1_5;
+	}
+	else if (vulkanVersion >= VK_API_VERSION_1_1)
+	{
+		// For version 1.1, use Vulkan 1.1 with SPV 1.3
 		target_client_version = glslang::EShTargetVulkan_1_1;
 		target_language_version = glslang::EShTargetSpv_1_3;
 	}
@@ -1090,15 +1096,6 @@ namespace nap
 		if (!errorState.check(glm::all(glm::greaterThan(mWorkGroupSize, { 0, 0, 0 })),
 			"Compute shader `%s` workgroup size is undefined. Set `local_size_x` to a valid number or map `local_size_x_id` to a shader constant in the material.", mID.c_str()))
 			return false;
-
-#ifdef __APPLE__
-		// Clamp work group size for Apple to 512, based on maxTotalThreadsPerThreadgroup,
-		// which doesn't necessarily match physical device limits, especially on older devices.
-		// See: https://developer.apple.com/documentation/metal/compute_passes/calculating_threadgroup_and_grid_sizes
-		// And: https://github.com/KhronosGroup/SPIRV-Cross/issues/837
-		for (uint i = 0; i< mWorkGroupSize.length(); i++)
-			mWorkGroupSize[i] = math::min<uint32>(mWorkGroupSize[i], 512);
-#endif // __APPLE__
 
 		return initLayout(device, errorState);
 	}

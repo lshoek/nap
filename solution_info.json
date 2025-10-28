@@ -2,5 +2,8 @@
     "Type": "nap::SolutionInfo",
     "mID": "SolutionInfo",
     "AdditionalTargets": [
+        "apps/loveposters",
+        "modules/napappgui",
+        "modules/napmiditwister"
     ]
 }

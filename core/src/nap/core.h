@@ -161,11 +161,6 @@ namespace nap
 		bool isInitialized() const;
 
 		/**
-		 * Initialize python interpreter so we can have components running python scripts
-		 */
-		bool initializePython(utility::ErrorState& error);
-
-		/**
 		 * Starts core, call this after initializing the engine, just before starting the application loop.
 		 */
 		void start();
@@ -421,12 +416,6 @@ namespace nap
 		void calculateFramerate(double deltaTime);
 
 		/**
-		 * Setup our Python environment to find Python in thirdparty for NAP release or NAP source,
-		 * or alongside our binary for a packaged project
-		 */
-		void setupPythonEnvironment();
-
-		/**
 		 * Explicitly load a project from file.
 		 * Call this before initializeEngine() if custom project setup is required.
 		 * @param projectFilename absolute path to the project file on disk.
@@ -448,7 +437,7 @@ namespace nap
 		 * @param serviceConfig the service configuration to add.
 		 * @return true when added, false if already present.
 		 */
-		bool addServiceConfig(std::unique_ptr<nap::ServiceConfiguration> serviceConfig);
+		bool addServiceConfig(std::unique_ptr<nap::ServiceConfiguration> serviceConfig, utility::ErrorState& error);
 
 		// Manages all the loaded modules
 		std::unique_ptr<ModuleManager> mModuleManager = nullptr;

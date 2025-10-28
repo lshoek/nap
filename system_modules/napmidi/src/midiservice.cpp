@@ -62,10 +62,4 @@ namespace nap
                 component->trigger(*event);
             }
     }
-
-
-	void MidiService::registerObjectCreators(rtti::Factory& factory)
-	{
-		factory.addObjectCreator(std::make_unique<MidiInputPortObjectCreator>(*this));
-	}
 }

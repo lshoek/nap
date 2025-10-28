@@ -22,5 +22,5 @@ void main(void)
 	vec4 texture_color = texture(colorTexture, pass_Uvs.xy);
 
 	// Set output color
-	out_Color = vec4(texture_color.rgb * ubo.color, texture_color.a * ubo.alpha); 
+	out_Color = vec4(texture_color.rgb * texture_color.a * ubo.color, texture_color.a * ubo.alpha); 
 }
